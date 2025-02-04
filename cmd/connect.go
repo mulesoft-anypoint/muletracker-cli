@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
-	"github.com/mulesoft-anypoint/muletracker-cli/config" // adjust the import path as needed
+	"github.com/mulesoft-anypoint/muletracker-cli/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
