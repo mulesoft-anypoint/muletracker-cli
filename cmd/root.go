@@ -30,5 +30,5 @@ func Execute() {
 
 func init() {
 	// Here you can add persistent flags and configuration settings.
-	rootCmd.PersistentFlags().StringP("config", "c", "", "config file (default is $HOME/.muletracker.yaml)")
+	rootCmd.PersistentFlags().StringP("config", "f", "", "config file (default is $HOME/.muletracker.yaml)")
 }

@@ -55,7 +55,7 @@ var connectCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(connectCmd)
 	connectCmd.Flags().StringP("clientId", "i", "", "Anypoint Platform connected app client id")
-	connectCmd.Flags().StringP("clientSecret", "p", "", "Anypoint Platform connected app client secret")
+	connectCmd.Flags().StringP("clientSecret", "s", "", "Anypoint Platform connected app client secret")
 	connectCmd.Flags().StringP("controlplane", "c", "eu", "Control plane to use (eu, us, gov)")
 	connectCmd.MarkFlagRequired("clientId")
 	connectCmd.MarkFlagRequired("clientSecret")
