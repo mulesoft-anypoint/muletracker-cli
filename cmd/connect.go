@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
-	"github.com/mulesoft-anypoint/muletracker-cli/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -17,11 +16,36 @@ var connectCmd = &cobra.Command{
 	Long:  `Authenticate and establish a connection to the Anypoint Platform using your credentials.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
-		clientId, _ := cmd.Flags().GetString("clientId")
-		clientSecret, _ := cmd.Flags().GetString("clientSecret")
-		controlPlane, _ := cmd.Flags().GetString("controlplane")
 
-		// Validate control plane input.
+		// Attempt to get clientId and clientSecret from flags;
+		// if not provided, read them from persisted configuration.
+		clientId, _ := cmd.Flags().GetString("clientId")
+		if clientId == "" {
+			clientId = viper.GetString("clientId")
+		}
+
+		clientSecret, _ := cmd.Flags().GetString("clientSecret")
+		if clientSecret == "" {
+			clientSecret = viper.GetString("clientSecret")
+		}
+
+		// Attempt to get controlplane from flag; if not provided, read from configuration.
+		controlPlane, _ := cmd.Flags().GetString("controlplane")
+		if controlPlane == "" {
+			controlPlane = viper.GetString("controlplane")
+		}
+		// If still empty, default to "eu"
+		if controlPlane == "" {
+			controlPlane = "eu"
+		}
+
+		// Validate that we have credentials.
+		if clientId == "" || clientSecret == "" {
+			fmt.Println("clientId and clientSecret are required. Please provide them via flags or ensure they are persisted in configuration.")
+			return
+		}
+
+		// Validate control plane and determine the server index.
 		serverIndex := cplane2serverindex(controlPlane)
 		if serverIndex == -1 {
 			fmt.Println("Invalid control plane. Valid values are 'eu', 'us', or 'gov'.")
@@ -35,19 +59,6 @@ var connectCmd = &cobra.Command{
 			return
 		}
 
-		// Persist configuration values using Viper.
-		// In production, consider more secure storage for sensitive values.
-		viper.Set("clientId", clientId)
-		viper.Set("clientSecret", clientSecret)
-		viper.Set("serverIndex", serverIndex)
-		viper.Set("accessToken", client.AccessToken)
-		// Persist the expiration time in RFC3339 format.
-		viper.Set("expiresAt", client.ExpiresAt.Format(time.RFC3339))
-
-		if err := config.SaveConfig(); err != nil {
-			fmt.Printf("Warning: Unable to persist configuration: %v\n", err)
-		}
-
 		fmt.Printf("Successfully connected. Access token valid until %s.\n", client.ExpiresAt.Format(time.RFC1123))
 	},
 }
@@ -57,8 +68,6 @@ func init() {
 	connectCmd.Flags().StringP("clientId", "i", "", "Anypoint Platform connected app client id")
 	connectCmd.Flags().StringP("clientSecret", "s", "", "Anypoint Platform connected app client secret")
 	connectCmd.Flags().StringP("controlplane", "c", "eu", "Control plane to use (eu, us, gov)")
-	connectCmd.MarkFlagRequired("clientId")
-	connectCmd.MarkFlagRequired("clientSecret")
 }
 
 // cplane2serverindex converts control plane name to server index.

@@ -9,13 +9,17 @@ import (
 
 	"github.com/mulesoft-anypoint/anypoint-client-go/authorization"
 	"github.com/mulesoft-anypoint/anypoint-client-go/org"
+	"github.com/mulesoft-anypoint/muletracker-cli/config"
+	"github.com/spf13/viper"
 )
 
 // Client wraps the anypoint-client-go Client with additional context as needed.
 type Client struct {
-	AccessToken string
-	ServerIndex int
-	ExpiresAt   time.Time // the time when the access token expires
+	ClientId     string
+	ClientSecret string
+	AccessToken  string
+	ServerIndex  int
+	ExpiresAt    time.Time // the time when the access token expires
 }
 
 // NewClient authenticates and returns a new Client instance.
@@ -41,13 +45,15 @@ func NewClient(ctx context.Context, serverIndex int, clientId, clientSecret stri
 	expiresIn := res.GetExpiresIn() // expiresIn is in seconds.
 	expirationTime := time.Now().Add(time.Duration(expiresIn) * time.Second)
 	client := &Client{
-		AccessToken: res.GetAccessToken(),
-		ServerIndex: serverIndex,
-		ExpiresAt:   expirationTime,
+		ClientId:     clientId,
+		ClientSecret: clientSecret,
+		AccessToken:  res.GetAccessToken(),
+		ServerIndex:  serverIndex,
+		ExpiresAt:    expirationTime,
 	}
 	// Optionally, you might log or print the expiration for debugging:
 	fmt.Printf("Access token will expire at: %s\n", expirationTime.Format(time.RFC1123))
-	// You might store the client in a global context or similar for later retrieval.
+	// You store the client in a global context for later retrieval.
 	setGlobalClient(client)
 	return client, nil
 }
@@ -57,13 +63,57 @@ func NewClient(ctx context.Context, serverIndex int, clientId, clientSecret stri
 var globalClient *Client
 
 func setGlobalClient(client *Client) {
+	// Persist configuration values using Viper.
+	// In production, consider more secure storage for sensitive values.
+	viper.Set("clientId", client.ClientId)
+	viper.Set("clientSecret", client.ClientSecret)
+	viper.Set("serverIndex", client.ServerIndex)
+	viper.Set("accessToken", client.AccessToken)
+	// Persist the expiration time in RFC3339 format.
+	viper.Set("expiresAt", client.ExpiresAt.Format(time.RFC3339))
+	if err := config.SaveConfig(); err != nil {
+		fmt.Printf("Warning: Unable to persist configuration: %v\n", err)
+	}
 	globalClient = client
 }
 
 // GetClientFromContext retrieves the global client.
+// If the global client is nil, it attempts to read persisted configuration from Viper
+// and recreate the client if the stored token is still valid.
 func GetClientFromContext() (*Client, error) {
-	if globalClient == nil {
-		return nil, errors.New("client not initialized. Please run 'muletracker connect' first")
+	// If the global client is already initialized, return it.
+	if globalClient != nil {
+		return globalClient, nil
+	}
+
+	// Attempt to read persisted configuration using Viper.
+	clientId := viper.GetString("clientId")
+	clientSecret := viper.GetString("clientSecret")
+	serverIndex := viper.GetInt("serverIndex")
+	accessToken := viper.GetString("accessToken")
+	expiresAtStr := viper.GetString("expiresAt")
+
+	// Check that all required configuration values are available.
+	if clientId == "" || clientSecret == "" || accessToken == "" || expiresAtStr == "" {
+		return nil, errors.New("client configuration incomplete. Please run 'connect' command first")
+	}
+
+	// Parse the expiration time.
+	expiresAt, err := time.Parse(time.RFC3339, expiresAtStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid expiration time in configuration: %w", err)
+	}
+
+	// Check if the token is still valid.
+	if time.Now().After(expiresAt) {
+		return nil, errors.New("access token expired. Please run 'connect' command")
+	}
+
+	// Recreate and store the client from configuration.
+	globalClient = &Client{
+		AccessToken: accessToken,
+		ServerIndex: serverIndex,
+		ExpiresAt:   expiresAt,
 	}
 	return globalClient, nil
 }

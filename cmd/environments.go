@@ -85,6 +85,6 @@ var environmentsCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(environmentsCmd)
-	environmentsCmd.Flags().String("org", "o", "Business Group ID")
+	environmentsCmd.Flags().StringP("org", "o", "", "Business Group ID")
 	environmentsCmd.MarkFlagRequired("org")
 }
