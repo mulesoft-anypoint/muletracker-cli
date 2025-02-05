@@ -34,9 +34,9 @@ var connectCmd = &cobra.Command{
 		if controlPlane == "" {
 			controlPlane = viper.GetString("controlplane")
 		}
-		// If still empty, default to "eu"
+		// If still empty, default to "us"
 		if controlPlane == "" {
-			controlPlane = "eu"
+			controlPlane = "us"
 		}
 
 		// Validate that we have credentials.
@@ -60,6 +60,9 @@ var connectCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Successfully connected. Access token valid until %s.\n", client.ExpiresAt.Format(time.RFC1123))
+
+		// Display the client info in a colorful way.
+		PrintClientInfo(client)
 	},
 }
 
@@ -67,7 +70,7 @@ func init() {
 	rootCmd.AddCommand(connectCmd)
 	connectCmd.Flags().StringP("clientId", "i", "", "Anypoint Platform connected app client id")
 	connectCmd.Flags().StringP("clientSecret", "s", "", "Anypoint Platform connected app client secret")
-	connectCmd.Flags().StringP("controlplane", "c", "eu", "Control plane to use (eu, us, gov)")
+	connectCmd.Flags().StringP("controlplane", "c", "", "Control plane to use (eu, us, gov)")
 }
 
 // cplane2serverindex converts control plane name to server index.
@@ -80,4 +83,17 @@ func cplane2serverindex(cplane string) int {
 		return 2
 	}
 	return -1 // Return -1 for invalid control plane
+}
+
+func serverindex2cplane(index int) string {
+	switch index {
+	case 0:
+		return "us"
+	case 1:
+		return "eu"
+	case 2:
+		return "gov"
+	default:
+		return "unknown"
+	}
 }

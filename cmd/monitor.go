@@ -38,6 +38,9 @@ and how many requests it received over a specified time window.`,
 			return
 		}
 
+		// Display the client info in a colorful way.
+		PrintClientInfo(client)
+
 		// Get the last-called time using the specified time window.
 		lastCalled, err := client.GetLastCalledTime(ctx, orgID, envID, appID, lcWindow)
 		if err != nil {
@@ -54,8 +57,19 @@ and how many requests it received over a specified time window.`,
 
 		// Output the results.
 		fmt.Printf("App ID: %s\n", appID)
-		fmt.Printf("Last Called Time (over last %s): %s\n", lcWindow, lastCalled.Format(time.RFC1123))
-		fmt.Printf("Request Count (over last %s): %d\n", rcWindow, requestCount)
+		// Check for last-called time data.
+		if lastCalled.IsZero() {
+			fmt.Printf("Last Called Time (over last %s): No data available\n", lcWindow)
+		} else {
+			fmt.Printf("Last Called Time (over last %s): %s\n", lcWindow, lastCalled.Format(time.RFC1123))
+		}
+
+		// Check for request count data.
+		if requestCount == 0 {
+			fmt.Printf("Request Count (over last %s): No data available\n", rcWindow)
+		} else {
+			fmt.Printf("Request Count (over last %s): %d\n", rcWindow, requestCount)
+		}
 	},
 }
 

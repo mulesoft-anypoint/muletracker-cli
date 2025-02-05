@@ -13,6 +13,13 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Servers mapping for building the base URL dynamically.
+var anypointServers = []string{
+	"https://anypoint.mulesoft.com",
+	"https://eu1.anypoint.mulesoft.com",
+	"https://gov.anypoint.mulesoft.com",
+}
+
 // Client wraps the anypoint-client-go Client with additional context as needed.
 type Client struct {
 	ClientId     string
@@ -20,6 +27,7 @@ type Client struct {
 	AccessToken  string
 	ServerIndex  int
 	ExpiresAt    time.Time // the time when the access token expires
+	InfluxDbId   int
 }
 
 // NewClient authenticates and returns a new Client instance.
@@ -41,6 +49,7 @@ func NewClient(ctx context.Context, serverIndex int, clientId, clientSecret stri
 		return nil, errors.New("error authenticating: " + details)
 	}
 	defer httpr.Body.Close()
+
 	// Calculate the token expiration time.
 	expiresIn := res.GetExpiresIn() // expiresIn is in seconds.
 	expirationTime := time.Now().Add(time.Duration(expiresIn) * time.Second)
@@ -50,6 +59,11 @@ func NewClient(ctx context.Context, serverIndex int, clientId, clientSecret stri
 		AccessToken:  res.GetAccessToken(),
 		ServerIndex:  serverIndex,
 		ExpiresAt:    expirationTime,
+	}
+	// Retrieve the InfluxDB ID from bootdata.
+	_, err = client.GetInfluxDBID(ctx)
+	if err != nil {
+		return nil, errors.New("error retrieving InfluxDB ID: " + err.Error())
 	}
 	// Optionally, you might log or print the expiration for debugging:
 	fmt.Printf("Access token will expire at: %s\n", expirationTime.Format(time.RFC1123))
@@ -71,6 +85,7 @@ func setGlobalClient(client *Client) {
 	viper.Set("accessToken", client.AccessToken)
 	// Persist the expiration time in RFC3339 format.
 	viper.Set("expiresAt", client.ExpiresAt.Format(time.RFC3339))
+	viper.Set("influxdbId", client.InfluxDbId)
 	if err := config.SaveConfig(); err != nil {
 		fmt.Printf("Warning: Unable to persist configuration: %v\n", err)
 	}
@@ -92,9 +107,10 @@ func GetClientFromContext() (*Client, error) {
 	serverIndex := viper.GetInt("serverIndex")
 	accessToken := viper.GetString("accessToken")
 	expiresAtStr := viper.GetString("expiresAt")
+	influxDbId := viper.GetInt("influxdbId")
 
 	// Check that all required configuration values are available.
-	if clientId == "" || clientSecret == "" || accessToken == "" || expiresAtStr == "" {
+	if clientId == "" || clientSecret == "" || accessToken == "" || expiresAtStr == "" || influxDbId == 0 {
 		return nil, errors.New("client configuration incomplete. Please run 'connect' command first")
 	}
 
@@ -114,8 +130,17 @@ func GetClientFromContext() (*Client, error) {
 		AccessToken: accessToken,
 		ServerIndex: serverIndex,
 		ExpiresAt:   expiresAt,
+		InfluxDbId:  influxDbId,
 	}
 	return globalClient, nil
+}
+
+// get the base URL for the Anypoint Platform API.
+func (c *Client) getServerHost() (string, error) {
+	if c.ServerIndex < 0 || c.ServerIndex >= len(anypointServers) {
+		return "", errors.New("invalid server index")
+	}
+	return anypointServers[c.ServerIndex], nil
 }
 
 // GetBusinessGroups retrieves the business groups.
@@ -158,10 +183,11 @@ func (c *Client) GetLastCalledTime(ctx context.Context, orgID, envID, appID, tim
 	)
 
 	params := QueryParams{
-		OrgID: orgID,
-		EnvID: envID,
-		AppID: appID,
-		Query: query,
+		OrgID:      orgID,
+		EnvID:      envID,
+		AppID:      appID,
+		Query:      query,
+		InfluxDBId: c.InfluxDbId,
 	}
 
 	resp, err := c.queryInfluxDB(ctx, params)
@@ -182,7 +208,7 @@ func (c *Client) GetLastCalledTime(ctx context.Context, orgID, envID, appID, tim
 		}
 	}
 
-	return time.Time{}, errors.New("no data found for last called time")
+	return time.Time{}, nil
 }
 
 // GetRequestCount fetches the total number of requests for the given app
@@ -195,10 +221,11 @@ func (c *Client) GetRequestCount(ctx context.Context, orgID, envID, appID, timeW
 	)
 
 	params := QueryParams{
-		OrgID: orgID,
-		EnvID: envID,
-		AppID: appID,
-		Query: query,
+		OrgID:      orgID,
+		EnvID:      envID,
+		AppID:      appID,
+		Query:      query,
+		InfluxDBId: c.InfluxDbId,
 	}
 
 	resp, err := c.queryInfluxDB(ctx, params)
@@ -217,5 +244,5 @@ func (c *Client) GetRequestCount(ctx context.Context, orgID, envID, appID, timeW
 		return total, nil
 	}
 
-	return 0, errors.New("no data found for request count")
+	return 0, nil
 }
