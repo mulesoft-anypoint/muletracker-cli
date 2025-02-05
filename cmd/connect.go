@@ -59,10 +59,10 @@ var connectCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Printf("Successfully connected. Access token valid until %s.\n", client.ExpiresAt.Format(time.RFC1123))
-
 		// Display the client info in a colorful way.
 		PrintClientInfo(client)
+
+		fmt.Printf("Successfully connected. Access token valid until %s.\n", client.ExpiresAt.Format(time.RFC1123))
 	},
 }
 

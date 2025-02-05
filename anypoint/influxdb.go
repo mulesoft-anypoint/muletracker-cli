@@ -121,8 +121,6 @@ func (c *Client) GetInfluxDBID(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-
-	// Assemble the full bootdata URL.
 	bootDataURL := host + "/monitoring/api/visualizer/api/bootdata"
 
 	// Create the GET request.

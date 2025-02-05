@@ -66,7 +66,7 @@ func NewClient(ctx context.Context, serverIndex int, clientId, clientSecret stri
 		return nil, errors.New("error retrieving InfluxDB ID: " + err.Error())
 	}
 	// Optionally, you might log or print the expiration for debugging:
-	fmt.Printf("Access token will expire at: %s\n", expirationTime.Format(time.RFC1123))
+	// fmt.Printf("Access token will expire at: %s\n", expirationTime.Format(time.RFC1123))
 	// You store the client in a global context for later retrieval.
 	setGlobalClient(client)
 	return client, nil

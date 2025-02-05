@@ -11,23 +11,57 @@ import (
 
 // PrintClientInfo prints non-sensitive client information in a colorful format.
 func PrintClientInfo(client *anypoint.Client) {
-	// Create color functions.
-	header := color.New(color.FgGreen, color.Bold).SprintFunc()
-	key := color.New(color.FgYellow).SprintFunc()
-	value := color.New(color.FgWhite).SprintFunc()
-	separator := color.New(color.FgGreen).SprintFunc()
+	data := map[string]interface{}{
+		"Connected App Client ID": client.ClientId,
+		"Server Index":            client.ServerIndex,
+		"Token Expires At":        client.ExpiresAt.Format(time.RFC1123),
+		"InfluxDB ID":             client.InfluxDbId,
+	}
 
-	// Define a separator line.
-	sepLine := separator(strings.Repeat("=", 50))
+	PrintSimpleResults("Client Information:", data)
+}
 
-	// Print a header.
-	fmt.Println(sepLine)
-	fmt.Println(header("Client Information:"))
-	fmt.Println(sepLine)
-	// Print non-sensitive fields.
-	fmt.Printf("%s: %s\n", key("Connected App Client ID"), value(client.ClientId))
-	fmt.Printf("%s: %s\n", key("Server Index"), serverindex2cplane(client.ServerIndex))
-	fmt.Printf("%s: %s\n", key("Token Expires At"), value(client.ExpiresAt.Format(time.RFC1123)))
-	fmt.Printf("%s: %d\n", key("InfluxDB ID"), client.InfluxDbId)
-	fmt.Println(sepLine)
+// PrintSimpleResults prints a header and key/value pairs in a simple, aligned style.
+func PrintSimpleResults(header string, data map[string]interface{}) {
+	// Define color functions.
+	headerColor := color.New(color.FgGreen, color.Bold).SprintFunc()
+	keyColor := color.New(color.FgYellow).SprintFunc()
+	valueColor := color.New(color.FgWhite).SprintFunc()
+
+	// Determine the maximum key width for alignment.
+	maxKeyLength := 0
+	for k := range data {
+		if len(k) > maxKeyLength {
+			maxKeyLength = len(k)
+		}
+	}
+
+	// Define a divider line.
+	divider := strings.Repeat("-", maxKeyLength+25)
+
+	// Print the header.
+	fmt.Println(headerColor(header))
+	fmt.Println(divider)
+
+	// Print each key/value pair.
+	for key, val := range data {
+		// Format time values specially.
+		var formattedVal string
+		switch t := val.(type) {
+		case time.Time:
+			if t.IsZero() {
+				formattedVal = "No data available"
+			} else {
+				formattedVal = t.Format(time.RFC1123)
+			}
+		default:
+			formattedVal = fmt.Sprintf("%v", val)
+		}
+
+		// Left-align the key using the maximum width.
+		fmt.Printf("%s: %s\n", keyColor(fmt.Sprintf("%-*s", maxKeyLength, key)), valueColor(formattedVal))
+	}
+
+	// Print the divider again.
+	fmt.Println(divider)
 }
