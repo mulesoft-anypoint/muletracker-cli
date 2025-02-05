@@ -127,10 +127,12 @@ func GetClientFromContext() (*Client, error) {
 
 	// Recreate and store the client from configuration.
 	globalClient = &Client{
-		AccessToken: accessToken,
-		ServerIndex: serverIndex,
-		ExpiresAt:   expiresAt,
-		InfluxDbId:  influxDbId,
+		ClientId:     clientId,
+		ClientSecret: clientSecret,
+		AccessToken:  accessToken,
+		ServerIndex:  serverIndex,
+		ExpiresAt:    expiresAt,
+		InfluxDbId:   influxDbId,
 	}
 	return globalClient, nil
 }

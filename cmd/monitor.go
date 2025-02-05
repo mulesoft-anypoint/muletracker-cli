@@ -39,14 +39,15 @@ func getAppsToMonitor(ctx context.Context, client *anypoint.Client, orgID, envID
 	return client.GetApps(ctx, orgID, envID)
 }
 
-// monitorSingleApp queries monitoring data for a single app.
+// monitorSingleApp retrieves monitoring data for a single app.
 func monitorSingleApp(ctx context.Context, client *anypoint.Client, orgID, envID, appID, lcWindow, rcWindow string) AppResult {
 	var res AppResult
 	res.AppID = appID
+	res.LCWindow = lcWindow
+	res.RCWindow = rcWindow
 
 	lastCalled, err1 := client.GetLastCalledTime(ctx, orgID, envID, appID, lcWindow)
 	reqCount, err2 := client.GetRequestCount(ctx, orgID, envID, appID, rcWindow)
-
 	if err1 != nil || err2 != nil {
 		res.Err = fmt.Errorf("lastCalled error: %v, requestCount error: %v", err1, err2)
 	}
@@ -114,6 +115,7 @@ func filterAppResults(results []AppResult, filterFlag string) []AppResult {
 
 // printSummary prints a condensed summary table for multiple apps.
 func printSummary(results []AppResult) {
+	fmt.Println("")
 	printAppsSummaryTable(results)
 }
 
@@ -125,8 +127,8 @@ func printAppsSummaryTable(results []AppResult) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
 
 	// Print header row.
-	fmt.Fprintln(w, "App ID\tLast Called\tRequest Count\tLCWin\tRCWin")
-	fmt.Fprintln(w, "------\t-----------\t-------------\t-----\t-----")
+	fmt.Fprintln(w, "App ID\tLast Called\tRequest Count")
+	fmt.Fprintln(w, "------\t-----------\t-------------")
 
 	// Iterate over the results and print each row.
 	for _, r := range results {
@@ -137,7 +139,7 @@ func printAppsSummaryTable(results []AppResult) {
 			lastCalled = r.LastCalled.Format(time.RFC1123)
 		}
 		// Each column is separated by a tab character.
-		fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\n", r.AppID, lastCalled, r.RequestCount, r.LCWindow, r.RCWindow)
+		fmt.Fprintf(w, "%s\t%s\t%d\n", r.AppID, lastCalled, r.RequestCount)
 	}
 
 	// Flush the writer to ensure output is written.
@@ -224,6 +226,8 @@ The --filter flag can be used to display:
 
 		// Monitor all apps concurrently.
 		allResults := monitorAppsConcurrently(ctx, client, orgID, envID, lcWindow, rcWindow, apps)
+		fmt.Printf("\n* Using last-called window: %s\n", lcWindow)
+		fmt.Printf("* Using request count window: %s\n", rcWindow)
 		fmt.Printf("* Found %d apps to monitor.\n", len(apps))
 		fmt.Printf("* Collected monitoring data for %d apps.\n", len(allResults))
 
