@@ -15,6 +15,7 @@ import (
 
 type AppResult struct {
 	AppID        string
+	AppType      string
 	LastCalled   time.Time
 	RequestCount int
 	Err          error
@@ -29,25 +30,26 @@ var includeEmpty bool
 // getAppsToMonitor retrieves the list of apps based on the provided flags.
 // If a specific appID is provided, it returns a slice with that single app.
 // Otherwise, it calls the GetApps method on the client.
-func getAppsToMonitor(ctx context.Context, client *anypoint.Client, orgID, envID, appID string) ([]anypoint.App, error) {
+func getAppsToMonitor(ctx context.Context, client *anypoint.Client, orgID, envID, appID string, filters ...anypoint.AppFilter) ([]anypoint.App, error) {
 	if appID != "" {
 		// If an app ID is provided, create a dummy App struct with that ID.
 		// (Assuming the monitoring functions use only the app.ID field.)
 		return []anypoint.App{{ID: appID}}, nil
 	}
 	// Otherwise, retrieve all apps.
-	return client.GetApps(ctx, orgID, envID)
+	return client.GetApps(ctx, orgID, envID, filters...)
 }
 
 // monitorSingleApp retrieves monitoring data for a single app.
-func monitorSingleApp(ctx context.Context, client *anypoint.Client, orgID, envID, appID, lcWindow, rcWindow string) AppResult {
+func monitorSingleApp(ctx context.Context, client *anypoint.Client, orgID, envID string, app anypoint.App, lcWindow, rcWindow string) AppResult {
 	var res AppResult
-	res.AppID = appID
+	res.AppID = app.ID
+	res.AppType = app.GetType()
 	res.LCWindow = lcWindow
 	res.RCWindow = rcWindow
 
-	lastCalled, err1 := client.GetLastCalledTime(ctx, orgID, envID, appID, lcWindow)
-	reqCount, err2 := client.GetRequestCount(ctx, orgID, envID, appID, rcWindow)
+	lastCalled, err1 := client.GetLastCalledTime(ctx, orgID, envID, app.ID, lcWindow)
+	reqCount, err2 := client.GetRequestCount(ctx, orgID, envID, app.ID, rcWindow)
 	if err1 != nil || err2 != nil {
 		res.Err = fmt.Errorf("lastCalled error: %v, requestCount error: %v", err1, err2)
 	}
@@ -74,7 +76,7 @@ func monitorAppsConcurrently(ctx context.Context, client *anypoint.Client, orgID
 			sem <- struct{}{}        // Acquire semaphore.
 			defer func() { <-sem }() // Release semaphore.
 			<-rateLimiter.C          // Wait for rate limiter tick.
-			result := monitorSingleApp(ctx, client, orgID, envID, app.ID, lcWindow, rcWindow)
+			result := monitorSingleApp(ctx, client, orgID, envID, app, lcWindow, rcWindow)
 			resultsCh <- result
 		}(app)
 	}
@@ -127,8 +129,8 @@ func printAppsSummaryTable(results []AppResult) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
 
 	// Print header row.
-	fmt.Fprintln(w, "App ID\tLast Called\tRequest Count")
-	fmt.Fprintln(w, "------\t-----------\t-------------")
+	fmt.Fprintln(w, "App ID\tType\tLast Called\tRequest Count")
+	fmt.Fprintln(w, "------\t----\t-----------\t-------------")
 
 	// Iterate over the results and print each row.
 	for _, r := range results {
@@ -139,7 +141,7 @@ func printAppsSummaryTable(results []AppResult) {
 			lastCalled = r.LastCalled.Format(time.RFC1123)
 		}
 		// Each column is separated by a tab character.
-		fmt.Fprintf(w, "%s\t%s\t%d\n", r.AppID, lastCalled, r.RequestCount)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%d\n", r.AppID, r.AppType, lastCalled, r.RequestCount)
 	}
 
 	// Flush the writer to ensure output is written.
@@ -166,12 +168,12 @@ var monitorCmd = &cobra.Command{
 	Short: "Monitor MuleSoft App Activity",
 	Long: `Monitor MuleSoft app activity by retrieving the last-called time 
 and request count for each app over specified time windows.
-If no specific app is provided, all apps for the given org/env are monitored.
 
-The --filter flag can be used to display:
-   all      : all apps (default)
-   nonempty : only apps with monitoring data (non-zero request count)
-   empty    : only apps with no monitoring data
+If the --app flag is empty, all apps for the given org/env are monitored concurrently.
+
+Filters:
+  --filter: "all" (default), "nonempty" (only apps with monitoring data), or "empty" (only apps with no data)
+  --app-type: "all" (default), "cloudhub" (only CloudHub apps), or "rtf" (only RTF apps)
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Retrieve the context from the command.
@@ -183,7 +185,8 @@ The --filter flag can be used to display:
 		appID, _ := cmd.Flags().GetString("app")
 		lcWindow, _ := cmd.Flags().GetString("last-called-window")
 		rcWindow, _ := cmd.Flags().GetString("request-count-window")
-		filter, _ := cmd.Flags().GetString("filter") // "all", "nonempty", or "empty"
+		dataFilter, _ := cmd.Flags().GetString("filter")
+		appType, _ := cmd.Flags().GetString("app-type")
 
 		// Check that the required flags are provided.
 		if orgID == "" || envID == "" {
@@ -201,8 +204,18 @@ The --filter flag can be used to display:
 		// Display the client info in a colorful way.
 		PrintClientInfo(client)
 
+		// Build type filters based on app-type flag.
+		var typeFilters []anypoint.AppFilter = []anypoint.AppFilter{anypoint.FilterRunning}
+		switch strings.ToLower(appType) {
+		case "cloudhub":
+			typeFilters = append(typeFilters, anypoint.FilterCloudhub)
+		case "rtf":
+			typeFilters = append(typeFilters, anypoint.FilterRTF)
+			// "all" (or any other value) does not add any type filter.
+		}
+
 		// Retrieve apps to monitor.
-		apps, err := getAppsToMonitor(ctx, client, orgID, envID, appID)
+		apps, err := getAppsToMonitor(ctx, client, orgID, envID, appID, typeFilters...)
 		if err != nil {
 			fmt.Printf("Error retrieving apps: %v\n", err)
 			return
@@ -215,7 +228,7 @@ The --filter flag can be used to display:
 
 		// If a single app was specified, run in single-app mode.
 		if appID != "" {
-			result := monitorSingleApp(ctx, client, orgID, envID, appID, lcWindow, rcWindow)
+			result := monitorSingleApp(ctx, client, orgID, envID, apps[0], lcWindow, rcWindow)
 			if result.Err != nil {
 				fmt.Printf("Error monitoring app %s: %v\n", appID, result.Err)
 				return
@@ -232,8 +245,8 @@ The --filter flag can be used to display:
 		fmt.Printf("* Collected monitoring data for %d apps.\n", len(allResults))
 
 		// Apply filter.
-		finalResults := filterAppResults(allResults, filter)
-		fmt.Printf("* After applying filter '%s', %d apps remain.\n", filter, len(finalResults))
+		finalResults := filterAppResults(allResults, dataFilter)
+		fmt.Printf("* After applying filter '%s', %d apps remain.\n", dataFilter, len(finalResults))
 		if len(finalResults) == 0 {
 			fmt.Println("No apps match the filter criteria.")
 			return
@@ -260,6 +273,7 @@ func init() {
 
 	// Define a flag to filter the results.
 	monitorCmd.Flags().String("filter", "all", "Filter results: all (default), nonempty (only apps with monitoring data), or empty (only apps with no data)")
+	monitorCmd.Flags().String("app-type", "all", "Filter apps by type: all (default), cloudhub (only CloudHub apps), or rtf (only RTF apps)")
 
 	// Mark the required flags.
 	monitorCmd.MarkFlagRequired("org")

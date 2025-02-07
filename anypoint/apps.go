@@ -12,7 +12,8 @@ import (
 type App struct {
 	ID     string `json:"id"`
 	Target struct {
-		Type string `json:"type"`
+		Type    string `json:"type"`
+		Subtype string `json:"subtype,omitempty"`
 	} `json:"target"`
 	Artifact struct {
 		LastUpdateTime int64  `json:"lastUpdateTime"`
@@ -28,9 +29,19 @@ type App struct {
 	} `json:"muleVersion"`
 	IsDeploymentWaiting bool   `json:"isDeploymentWaiting"`
 	LastReportedStatus  string `json:"lastReportedStatus"`
-	Details             struct {
+	Application         struct {
+		Status string `json:"status"`
+	} `json:"application",omitempty`
+	Details struct {
 		Domain string `json:"domain"`
 	} `json:"details"`
+}
+
+func (a App) GetType() string {
+	if a.Target.Type == "MC" {
+		return a.Target.Subtype
+	}
+	return a.Target.Type
 }
 
 // AppsResponse models the response from the applications endpoint.
@@ -39,8 +50,11 @@ type AppsResponse struct {
 	Total int   `json:"total"`
 }
 
+// AppFilter defines a function type for filtering apps.
+type AppFilter func(app App) bool
+
 // GetApps retrieves all applications for a given org and env.
-func (c *Client) GetApps(ctx context.Context, orgID, envID string) ([]App, error) {
+func (c *Client) GetApps(ctx context.Context, orgID, envID string, filters ...AppFilter) ([]App, error) {
 	host, err := c.getServerHost()
 	if err != nil {
 		return nil, err
@@ -72,5 +86,52 @@ func (c *Client) GetApps(ctx context.Context, orgID, envID string) ([]App, error
 	if err := json.NewDecoder(resp.Body).Decode(&appsResp); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	}
-	return appsResp.Data, nil
+
+	apps := appsResp.Data
+	if len(filters) > 0 {
+		apps = FilterApps(apps, filters...)
+	}
+	return apps, nil
+}
+
+// FilterApps returns a slice of apps that match all provided filters.
+func FilterApps(apps []App, filters ...AppFilter) []App {
+	var filtered []App
+	for _, app := range apps {
+		match := true
+		for _, filter := range filters {
+			if !filter(app) {
+				match = false
+				break
+			}
+		}
+		if match {
+			filtered = append(filtered, app)
+		}
+	}
+	return filtered
+}
+
+// FilterCloudhub returns true if an app is deployed to CloudHub.
+func FilterCloudhub(app App) bool {
+	return app.Target.Type == "CLOUDHUB"
+}
+
+// FilterRTF returns true if an app is deployed to RTF (runtime fabrics).
+func FilterRTF(app App) bool {
+	return app.Target.Type == "MC" && app.Target.Subtype == "runtime-fabrics"
+}
+
+// FilterRunning returns true if an app is running.
+func FilterRunning(app App) bool {
+	// Check for CloudHub apps.
+	if FilterCloudhub(app) {
+		return app.LastReportedStatus != "STARTED"
+	}
+	// Check for RTF apps.
+	if FilterRTF(app) {
+		return app.Application.Status != "RUNNING"
+	}
+	// For other types, do not filter them out.
+	return true
 }
