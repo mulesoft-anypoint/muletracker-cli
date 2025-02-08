@@ -2,9 +2,11 @@ package anypoint
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/mulesoft-anypoint/anypoint-client-go/authorization"
@@ -27,7 +29,7 @@ type Client struct {
 	AccessToken  string
 	ServerIndex  int
 	ExpiresAt    time.Time // the time when the access token expires
-	InfluxDbId   int
+	InfluxDbId   int       // the InfluxDB ID for the organization
 }
 
 // NewClient authenticates and returns a new Client instance.
@@ -174,20 +176,75 @@ func (c *Client) GetEnvironments(ctx context.Context, bgId string) ([]org.Enviro
 	return org.GetEnvironments(), nil
 }
 
+// GetApps retrieves all applications for a given org and env.
+func (c *Client) GetApps(ctx context.Context, orgID, envID string, filters ...AppFilter) ([]App, error) {
+	host, err := c.getServerHost()
+	if err != nil {
+		return nil, err
+	}
+
+	url := host + "/armui/api/v1/applications"
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	// Set required headers.
+	req.Header.Set("x-anypnt-org-id", orgID)
+	req.Header.Set("x-anypnt-env-id", envID)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error executing request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("non-OK status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var appsResp AppsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&appsResp); err != nil {
+		return nil, fmt.Errorf("error decoding response: %w", err)
+	}
+
+	apps := appsResp.Data
+	if len(filters) > 0 {
+		apps = FilterApps(apps, filters...)
+	}
+	return apps, nil
+}
+
 // GetLastCalledTime fetches the last time the given app was called.
-// It uses a query that calculates the 75th percentile of the avg_response_time
+// It uses a query that calculates the 75th percentile of the avg_request_count
 // over the specified time window. It returns the timestamp of the latest data point.
 // The timeWindow parameter is a string (e.g. "15m", "24h", "3d") to define the lookback period.
-func (c *Client) GetLastCalledTime(ctx context.Context, orgID, envID, appID, timeWindow string) (time.Time, error) {
-	query := fmt.Sprintf(
-		`SELECT percentile("avg_response_time", 75) FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`,
-		orgID, envID, appID, timeWindow,
-	)
+func (c *Client) GetLastCalledTime(ctx context.Context, orgID, envID string, app App, timeWindow string) (time.Time, error) {
+	templateCH1 := `SELECT percentile("avg_request_count", 75) FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`
+	templateRTF := `SELECT percentile("avg_request_count", 75) FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "cluster_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`
+	var query string
+
+	if FilterCH1(app) {
+		query = fmt.Sprintf(
+			templateCH1,
+			orgID, envID, app.Details.Domain, timeWindow,
+		)
+	} else if FilterRTF(app) {
+		query = fmt.Sprintf(
+			templateRTF,
+			orgID, envID, app.Target.ID, app.Artifact.Name, timeWindow,
+		)
+	} else {
+		fmt.Printf("Unsupported app target: %v\n", app)
+		return time.Time{}, fmt.Errorf("unsupported app type: %s", app.Target.Type)
+	}
 
 	params := QueryParams{
 		OrgID:      orgID,
 		EnvID:      envID,
-		AppID:      appID,
+		AppID:      app.ID,
 		Query:      query,
 		InfluxDBId: c.InfluxDbId,
 	}
@@ -216,16 +273,29 @@ func (c *Client) GetLastCalledTime(ctx context.Context, orgID, envID, appID, tim
 // GetRequestCount fetches the total number of requests for the given app
 // over the specified time window.
 // The timeWindow parameter is a string (e.g. "24h", "3d") to define the lookback period.
-func (c *Client) GetRequestCount(ctx context.Context, orgID, envID, appID, timeWindow string) (int, error) {
-	query := fmt.Sprintf(
-		`SELECT count("avg_response_time") FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`,
-		orgID, envID, appID, timeWindow,
-	)
+func (c *Client) GetRequestCount(ctx context.Context, orgID, envID string, app App, timeWindow string) (int, error) {
+	templateCH1 := `SELECT sum("avg_request_count") FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`
+	templateRTF := `SELECT sum("avg_request_count") FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "cluster_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`
+	var query string
+
+	if FilterCH1(app) {
+		query = fmt.Sprintf(
+			templateCH1,
+			orgID, envID, app.Details.Domain, timeWindow,
+		)
+	} else if FilterRTF(app) {
+		query = fmt.Sprintf(
+			templateRTF,
+			orgID, envID, app.Target.ID, app.Artifact.Name, timeWindow,
+		)
+	} else {
+		return 0, fmt.Errorf("unsupported app type: %s", app.Target.Type)
+	}
 
 	params := QueryParams{
 		OrgID:      orgID,
 		EnvID:      envID,
-		AppID:      appID,
+		AppID:      app.ID,
 		Query:      query,
 		InfluxDBId: c.InfluxDbId,
 	}

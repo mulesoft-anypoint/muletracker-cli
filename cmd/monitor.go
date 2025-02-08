@@ -28,28 +28,32 @@ var includeEmpty bool
 // ----- Helper Functions ----- //
 
 // getAppsToMonitor retrieves the list of apps based on the provided flags.
-// If a specific appID is provided, it returns a slice with that single app.
+// If a specific appName is provided, it returns a slice with that single app.
 // Otherwise, it calls the GetApps method on the client.
 func getAppsToMonitor(ctx context.Context, client *anypoint.Client, orgID, envID, appID string, filters ...anypoint.AppFilter) ([]anypoint.App, error) {
+	apps, err := client.GetApps(ctx, orgID, envID, filters...)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving apps: %v", err)
+	}
+
 	if appID != "" {
-		// If an app ID is provided, create a dummy App struct with that ID.
-		// (Assuming the monitoring functions use only the app.ID field.)
-		return []anypoint.App{{ID: appID}}, nil
+		return anypoint.FilterApps(apps, anypoint.FilterByName(appID)), nil
 	}
 	// Otherwise, retrieve all apps.
-	return client.GetApps(ctx, orgID, envID, filters...)
+	return apps, nil
 }
 
 // monitorSingleApp retrieves monitoring data for a single app.
 func monitorSingleApp(ctx context.Context, client *anypoint.Client, orgID, envID string, app anypoint.App, lcWindow, rcWindow string) AppResult {
 	var res AppResult
-	res.AppID = app.ID
+	// res.AppID = app.ID
+	res.AppID = app.Artifact.Name
 	res.AppType = app.GetType()
 	res.LCWindow = lcWindow
 	res.RCWindow = rcWindow
 
-	lastCalled, err1 := client.GetLastCalledTime(ctx, orgID, envID, app.ID, lcWindow)
-	reqCount, err2 := client.GetRequestCount(ctx, orgID, envID, app.ID, rcWindow)
+	lastCalled, err1 := client.GetLastCalledTime(ctx, orgID, envID, app, lcWindow)
+	reqCount, err2 := client.GetRequestCount(ctx, orgID, envID, app, rcWindow)
 	if err1 != nil || err2 != nil {
 		res.Err = fmt.Errorf("lastCalled error: %v, requestCount error: %v", err1, err2)
 	}
@@ -86,6 +90,9 @@ func monitorAppsConcurrently(ctx context.Context, client *anypoint.Client, orgID
 
 	var results []AppResult
 	for r := range resultsCh {
+		if r.Err != nil {
+			fmt.Fprintf(os.Stderr, "Error monitoring app %s: %v\n", r.AppID, r.Err)
+		}
 		results = append(results, r)
 	}
 	return results
@@ -208,10 +215,14 @@ Filters:
 		var typeFilters []anypoint.AppFilter = []anypoint.AppFilter{anypoint.FilterRunning}
 		switch strings.ToLower(appType) {
 		case "cloudhub":
-			typeFilters = append(typeFilters, anypoint.FilterCloudhub)
+			typeFilters = append(typeFilters, anypoint.FilterCH1)
+			break
 		case "rtf":
 			typeFilters = append(typeFilters, anypoint.FilterRTF)
-			// "all" (or any other value) does not add any type filter.
+			break
+		case "all":
+			typeFilters = append(typeFilters, anypoint.FilterCH1OrRTF)
+			break
 		}
 
 		// Retrieve apps to monitor.
