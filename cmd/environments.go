@@ -7,10 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
-	"github.com/mulesoft-anypoint/muletracker-cli/config" // adjust the import path as needed
+	"github.com/mulesoft-anypoint/muletracker-cli/anypoint" // adjust the import path as needed
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // environmentsCmd represents the environment command
@@ -24,12 +22,6 @@ var environmentsCmd = &cobra.Command{
 		if businessGroupID == "" {
 			fmt.Println("Please provide a business group ID using the --org flag.")
 			return
-		}
-
-		// Persist the Business Group (Org) ID.
-		viper.Set("org", businessGroupID)
-		if err := config.SaveConfig(); err != nil {
-			fmt.Printf("Warning: Unable to persist organization configuration: %v\n", err)
 		}
 
 		// Retrieve the authenticated client.
@@ -76,11 +68,9 @@ var environmentsCmd = &cobra.Command{
 		}
 
 		selectedEnv := environments[selection-1]
-		// Persist the selected Environment ID.
-		viper.Set("env", selectedEnv.GetId())
-		if err := config.SaveConfig(); err != nil {
-			fmt.Printf("Warning: Unable to persist environment configuration: %v\n", err)
-		}
+
+		client.SetOrg(businessGroupID)
+		client.SetEnv(selectedEnv.GetId())
 
 		fmt.Printf("Selected environment: %s (ID: %s)\n", selectedEnv.GetName(), selectedEnv.GetId())
 	},

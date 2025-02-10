@@ -13,9 +13,11 @@ import (
 func PrintClientInfo(client *anypoint.Client) {
 	data := map[string]interface{}{
 		"Connected App Client ID": client.ClientId,
-		"Server Index":            client.ServerIndex,
+		"Control Plane":           serverindex2cplane(client.ServerIndex),
 		"Token Expires At":        client.ExpiresAt.Format(time.RFC1123),
 		"InfluxDB ID":             client.InfluxDbId,
+		"Business Group Id":       client.Org,
+		"Environment Id":          client.Env,
 	}
 
 	PrintSimpleResults("Client Information:", data)

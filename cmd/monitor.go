@@ -173,7 +173,7 @@ func printDetailedResult(res AppResult) {
 var monitorCmd = &cobra.Command{
 	Use:   "monitor",
 	Short: "Monitor MuleSoft App Activity",
-	Long: `Monitor MuleSoft app activity by retrieving the last-called time 
+	Long: `Monitor MuleSoft app activity by retrieving the last-called time
 and request count for each app over specified time windows.
 
 If the --app flag is empty, all apps for the given org/env are monitored concurrently.
@@ -186,7 +186,7 @@ Filters:
 		// Retrieve the context from the command.
 		ctx := cmd.Context()
 
-		// Retrieve required flags.
+		// Retrieve flag values.
 		orgID, _ := cmd.Flags().GetString("org")
 		envID, _ := cmd.Flags().GetString("env")
 		appID, _ := cmd.Flags().GetString("app")
@@ -195,17 +195,29 @@ Filters:
 		dataFilter, _ := cmd.Flags().GetString("filter")
 		appType, _ := cmd.Flags().GetString("app-type")
 
-		// Check that the required flags are provided.
-		if orgID == "" || envID == "" {
-			fmt.Println("Please provide --org, --env flags")
-			return
-		}
-
 		// Retrieve the previously connected client from context.
 		client, err := anypoint.GetClientFromContext()
 		if err != nil {
 			fmt.Printf("Error retrieving client: %v\n", err)
 			return
+		}
+
+		// Check that the required flags are provided.
+		if (client.IsOrgEmpty() && orgID == "") || (client.IsEnvEmpty() && envID == "") {
+			fmt.Println("Please provide --org, --env flags")
+			return
+		}
+
+		// Save/Load org and env
+		if client.IsOrgEmpty() {
+			client.SetOrg(orgID)
+		} else {
+			orgID = client.Org
+		}
+		if client.IsEnvEmpty() {
+			client.SetEnv(envID)
+		} else {
+			envID = client.Env
 		}
 
 		// Display the client info in a colorful way.
@@ -287,6 +299,6 @@ func init() {
 	monitorCmd.Flags().String("app-type", "all", "Filter apps by type: all (default), cloudhub (only CloudHub apps), or rtf (only RTF apps)")
 
 	// Mark the required flags.
-	monitorCmd.MarkFlagRequired("org")
-	monitorCmd.MarkFlagRequired("env")
+	// monitorCmd.MarkFlagRequired("org")
+	// monitorCmd.MarkFlagRequired("env")
 }

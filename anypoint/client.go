@@ -30,6 +30,8 @@ type Client struct {
 	ServerIndex  int
 	ExpiresAt    time.Time // the time when the access token expires
 	InfluxDbId   int       // the InfluxDB ID for the organization
+	Org          string
+	Env          string
 }
 
 // NewClient authenticates and returns a new Client instance.
@@ -61,6 +63,8 @@ func NewClient(ctx context.Context, serverIndex int, clientId, clientSecret stri
 		AccessToken:  res.GetAccessToken(),
 		ServerIndex:  serverIndex,
 		ExpiresAt:    expirationTime,
+		Org:          viper.GetString("org"),
+		Env:          viper.GetString("env"),
 	}
 	// Retrieve the InfluxDB ID from bootdata.
 	_, err = client.GetInfluxDBID(ctx)
@@ -85,9 +89,12 @@ func setGlobalClient(client *Client) {
 	viper.Set("clientSecret", client.ClientSecret)
 	viper.Set("serverIndex", client.ServerIndex)
 	viper.Set("accessToken", client.AccessToken)
-	// Persist the expiration time in RFC3339 format.
 	viper.Set("expiresAt", client.ExpiresAt.Format(time.RFC3339))
 	viper.Set("influxdbId", client.InfluxDbId)
+	viper.Set("org", client.Org)
+	viper.Set("env", client.Env)
+
+	//Save conf
 	if err := config.SaveConfig(); err != nil {
 		fmt.Printf("Warning: Unable to persist configuration: %v\n", err)
 	}
@@ -110,6 +117,8 @@ func GetClientFromContext() (*Client, error) {
 	accessToken := viper.GetString("accessToken")
 	expiresAtStr := viper.GetString("expiresAt")
 	influxDbId := viper.GetInt("influxdbId")
+	org := viper.GetString("org")
+	env := viper.GetString("env")
 
 	// Check that all required configuration values are available.
 	if clientId == "" || clientSecret == "" || accessToken == "" || expiresAtStr == "" || influxDbId == 0 {
@@ -135,8 +144,28 @@ func GetClientFromContext() (*Client, error) {
 		ServerIndex:  serverIndex,
 		ExpiresAt:    expiresAt,
 		InfluxDbId:   influxDbId,
+		Org:          org,
+		Env:          env,
 	}
 	return globalClient, nil
+}
+
+func (c *Client) SetOrg(org string) {
+	c.Org = org
+	setGlobalClient(c)
+}
+
+func (c *Client) SetEnv(env string) {
+	c.Env = env
+	setGlobalClient(c)
+}
+
+func (c *Client) IsOrgEmpty() bool {
+	return len(c.Org) == 0
+}
+
+func (c *Client) IsEnvEmpty() bool {
+	return len(c.Env) == 0
 }
 
 // get the base URL for the Anypoint Platform API.
