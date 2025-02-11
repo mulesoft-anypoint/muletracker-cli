@@ -221,7 +221,7 @@ Filters:
 		}
 
 		// Display the client info in a colorful way.
-		PrintClientInfo(client)
+		PrintClientInfo(ctx, client)
 
 		// Build type filters based on app-type flag.
 		var typeFilters []anypoint.AppFilter = []anypoint.AppFilter{anypoint.FilterRunning}

@@ -1,23 +1,44 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/mulesoft-anypoint/anypoint-client-go/org"
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
 )
 
 // PrintClientInfo prints non-sensitive client information in a colorful format.
-func PrintClientInfo(client *anypoint.Client) {
+func PrintClientInfo(ctx context.Context, client *anypoint.Client) {
+	var bg *org.MasterBGDetail
+	var err error
+	var env string
+	if !client.IsOrgEmpty() {
+		bg, err = client.GetBusinessGroup(ctx, client.Org)
+		if err != nil {
+			fmt.Printf("Error retrieving org: %v\n", err)
+		}
+		if !client.IsEnvEmpty() {
+			for _, e := range bg.GetEnvironments() {
+				if e.GetId() == client.Env {
+					env = e.GetName()
+					break
+				}
+			}
+		}
+	}
+
 	data := map[string]interface{}{
-		"Connected App Client ID": client.ClientId,
-		"Control Plane":           serverindex2cplane(client.ServerIndex),
-		"Token Expires At":        client.ExpiresAt.Format(time.RFC1123),
-		"InfluxDB ID":             client.InfluxDbId,
-		"Business Group Id":       client.Org,
-		"Environment Id":          client.Env,
+		"* Control Plane":     strings.ToUpper(serverindex2cplane(client.ServerIndex)),
+		"* Business Group Id": bg.GetName(),
+		"* Environment Id":    env,
+		"* Connected App":     client.ClientId,
+		"* Token Expires At":  client.ExpiresAt.Format(time.RFC1123),
+		// "InfluxDB ID":             client.InfluxDbId,
 	}
 
 	PrintSimpleResults("Client Information:", data)
@@ -32,11 +53,15 @@ func PrintSimpleResults(header string, data map[string]interface{}) {
 
 	// Determine the maximum key width for alignment.
 	maxKeyLength := 0
+	keys := make([]string, 0, len(data))
 	for k := range data {
+		keys = append(keys, k)
 		if len(k) > maxKeyLength {
 			maxKeyLength = len(k)
 		}
 	}
+	// Sort keys alphabetically.
+	sort.Strings(keys)
 
 	// Define a divider line.
 	divider := strings.Repeat("-", maxKeyLength+25)
@@ -46,8 +71,8 @@ func PrintSimpleResults(header string, data map[string]interface{}) {
 	fmt.Println(divider)
 
 	// Print each key/value pair.
-	for key, val := range data {
-		// Format time values specially.
+	for _, key := range keys {
+		val := data[key]
 		var formattedVal string
 		switch t := val.(type) {
 		case time.Time:
@@ -61,7 +86,7 @@ func PrintSimpleResults(header string, data map[string]interface{}) {
 		}
 
 		// Left-align the key using the maximum width.
-		fmt.Printf("%s: %s\n", keyColor(fmt.Sprintf("%-*s", maxKeyLength, key)), valueColor(formattedVal))
+		fmt.Printf("%-*s: %s\n", maxKeyLength, keyColor(key), valueColor(formattedVal))
 	}
 
 	// Print the divider again.
