@@ -12,6 +12,31 @@ import (
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
 )
 
+// cplane2serverindex converts control plane name to server index.
+func cplane2serverindex(cplane string) int {
+	if cplane == "eu" {
+		return 1
+	} else if cplane == "us" {
+		return 0
+	} else if cplane == "gov" {
+		return 2
+	}
+	return -1 // Return -1 for invalid control plane
+}
+
+func serverindex2cplane(index int) string {
+	switch index {
+	case 0:
+		return "us"
+	case 1:
+		return "eu"
+	case 2:
+		return "gov"
+	default:
+		return "unknown"
+	}
+}
+
 // PrintClientInfo prints non-sensitive client information in a colorful format.
 func PrintClientInfo(ctx context.Context, client *anypoint.Client) {
 	var bg *org.MasterBGDetail

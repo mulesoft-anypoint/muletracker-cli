@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mulesoft-anypoint/muletracker-cli/anypoint" // adjust the import path as needed
+	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
 	"github.com/spf13/cobra"
 )
 

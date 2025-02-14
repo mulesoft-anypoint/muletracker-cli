@@ -17,20 +17,17 @@ var connectCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
 
-		// Attempt to get clientId and clientSecret from flags;
-		// if not provided, read them from persisted configuration.
+		// Read Flags
 		clientId, _ := cmd.Flags().GetString("clientId")
+		clientSecret, _ := cmd.Flags().GetString("clientSecret")
+		controlPlane, _ := cmd.Flags().GetString("controlplane")
+		//control flag values
 		if clientId == "" {
 			clientId = viper.GetString("clientId")
 		}
-
-		clientSecret, _ := cmd.Flags().GetString("clientSecret")
 		if clientSecret == "" {
 			clientSecret = viper.GetString("clientSecret")
 		}
-
-		// Attempt to get controlplane from flag; if not provided, read from configuration.
-		controlPlane, _ := cmd.Flags().GetString("controlplane")
 		if controlPlane == "" {
 			controlPlane = viper.GetString("controlplane")
 		}
@@ -71,29 +68,4 @@ func init() {
 	connectCmd.Flags().StringP("clientId", "i", "", "Anypoint Platform connected app client id")
 	connectCmd.Flags().StringP("clientSecret", "s", "", "Anypoint Platform connected app client secret")
 	connectCmd.Flags().StringP("controlplane", "c", "", "Control plane to use (eu, us, gov)")
-}
-
-// cplane2serverindex converts control plane name to server index.
-func cplane2serverindex(cplane string) int {
-	if cplane == "eu" {
-		return 1
-	} else if cplane == "us" {
-		return 0
-	} else if cplane == "gov" {
-		return 2
-	}
-	return -1 // Return -1 for invalid control plane
-}
-
-func serverindex2cplane(index int) string {
-	switch index {
-	case 0:
-		return "us"
-	case 1:
-		return "eu"
-	case 2:
-		return "gov"
-	default:
-		return "unknown"
-	}
 }

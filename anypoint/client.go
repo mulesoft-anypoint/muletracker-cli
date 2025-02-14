@@ -24,24 +24,71 @@ var anypointServers = []string{
 
 // Client wraps the anypoint-client-go Client with additional context as needed.
 type Client struct {
-	ClientId     string
-	ClientSecret string
-	AccessToken  string
-	ServerIndex  int
-	ExpiresAt    time.Time // the time when the access token expires
-	InfluxDbId   int       // the InfluxDB ID for the organization
-	Org          string
-	Env          string
+	ClientId         string
+	ClientSecret     string
+	AccessToken      string
+	AdminAccessToken string // token given manually which is supposed to be platform admin
+	ServerIndex      int
+	ExpiresAt        time.Time // the time when the access token expires
+	InfluxDbId       int       // the InfluxDB ID for the organization
+	Org              string
+	Env              string
+	// New fields to track which token is being used.
+	ActiveTokenType string // "admin" or "connected"
+}
+
+// GetClientOptions holds optional parameters for GetClientFromContext.
+type GetClientOptions struct {
+	SkipTokenExpiration bool
+}
+
+// GetClientOption is a function that modifies GetClientOptions.
+type GetClientOption func(*GetClientOptions)
+
+// WithSkipTokenExpiration is an option to skip checking token expiration.
+func WithSkipTokenExpiration() GetClientOption {
+	return func(opts *GetClientOptions) {
+		opts.SkipTokenExpiration = true
+	}
 }
 
 // NewClient authenticates and returns a new Client instance.
 func NewClient(ctx context.Context, serverIndex int, clientId, clientSecret string) (*Client, error) {
-	// This is pseudo-code; refer to anypoint-client-go documentation for actual usage.
+	loginRes, err := loginConnectedApp(ctx, serverIndex, clientId, clientSecret)
+	if err != nil {
+		return nil, errors.New("error authenticating: " + err.Error())
+	}
+	// Calculate the token expiration time.
+	expiresIn := loginRes.GetExpiresIn() // expiresIn is in seconds.
+	expirationTime := time.Now().Add(time.Duration(expiresIn) * time.Second)
+	client := &Client{
+		ClientId:        clientId,
+		ClientSecret:    clientSecret,
+		AccessToken:     loginRes.GetAccessToken(),
+		ServerIndex:     serverIndex,
+		ExpiresAt:       expirationTime,
+		Org:             viper.GetString("org"),
+		Env:             viper.GetString("env"),
+		ActiveTokenType: "connected",
+	}
+	// Retrieve the InfluxDB ID from bootdata.
+	_, err = client.GetInfluxDBID(ctx)
+	if err != nil {
+		return nil, errors.New("error retrieving InfluxDB ID: " + err.Error())
+	}
+	// You store the client in a global context for later retrieval.
+	setGlobalClient(client)
+	return client, nil
+}
+
+// Logs in the connected app
+func loginConnectedApp(ctx context.Context, serverIndex int, clientId, clientSecret string) (*authorization.InlineResponse200, error) {
+	authCtx := context.WithValue(ctx, authorization.ContextServerIndex, serverIndex)
 	creds := authorization.NewCredentialsWithDefaults()
 	creds.SetClientId(clientId)
 	creds.SetClientSecret(clientSecret)
 	apiClient := authorization.NewAPIClient(authorization.NewConfiguration())
-	res, httpr, err := apiClient.DefaultApi.ApiV2Oauth2TokenPost(ctx).Credentials(*creds).Execute()
+	res, httpr, err := apiClient.DefaultApi.ApiV2Oauth2TokenPost(authCtx).Credentials(*creds).Execute()
 	if err != nil {
 		var details string
 		if httpr != nil {
@@ -50,32 +97,10 @@ func NewClient(ctx context.Context, serverIndex int, clientId, clientSecret stri
 		} else {
 			details = err.Error()
 		}
-		return nil, errors.New("error authenticating: " + details)
+		return nil, errors.New(details)
 	}
 	defer httpr.Body.Close()
-
-	// Calculate the token expiration time.
-	expiresIn := res.GetExpiresIn() // expiresIn is in seconds.
-	expirationTime := time.Now().Add(time.Duration(expiresIn) * time.Second)
-	client := &Client{
-		ClientId:     clientId,
-		ClientSecret: clientSecret,
-		AccessToken:  res.GetAccessToken(),
-		ServerIndex:  serverIndex,
-		ExpiresAt:    expirationTime,
-		Org:          viper.GetString("org"),
-		Env:          viper.GetString("env"),
-	}
-	// Retrieve the InfluxDB ID from bootdata.
-	_, err = client.GetInfluxDBID(ctx)
-	if err != nil {
-		return nil, errors.New("error retrieving InfluxDB ID: " + err.Error())
-	}
-	// Optionally, you might log or print the expiration for debugging:
-	// fmt.Printf("Access token will expire at: %s\n", expirationTime.Format(time.RFC1123))
-	// You store the client in a global context for later retrieval.
-	setGlobalClient(client)
-	return client, nil
+	return &res, nil
 }
 
 // For simplicity, we store the client globally.
@@ -89,10 +114,12 @@ func setGlobalClient(client *Client) {
 	viper.Set("clientSecret", client.ClientSecret)
 	viper.Set("serverIndex", client.ServerIndex)
 	viper.Set("accessToken", client.AccessToken)
+	viper.Set("adminAccessToken", client.AdminAccessToken)
 	viper.Set("expiresAt", client.ExpiresAt.Format(time.RFC3339))
 	viper.Set("influxdbId", client.InfluxDbId)
 	viper.Set("org", client.Org)
 	viper.Set("env", client.Env)
+	viper.Set("activeTokenType", client.ActiveTokenType)
 
 	//Save conf
 	if err := config.SaveConfig(); err != nil {
@@ -104,9 +131,22 @@ func setGlobalClient(client *Client) {
 // GetClientFromContext retrieves the global client.
 // If the global client is nil, it attempts to read persisted configuration from Viper
 // and recreate the client if the stored token is still valid.
-func GetClientFromContext() (*Client, error) {
-	// If the global client is already initialized, return it.
+func GetClientFromContext(opts ...GetClientOption) (*Client, error) {
+	// Set default options.
+	options := &GetClientOptions{
+		SkipTokenExpiration: false,
+	}
+
+	// Apply all provided options.
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	// If globalClient is available, check token expiration unless it's skipped.
 	if globalClient != nil {
+		if !options.SkipTokenExpiration && time.Now().After(globalClient.ExpiresAt) {
+			return nil, errors.New("token expired; please run 'connect' command")
+		}
 		return globalClient, nil
 	}
 
@@ -115,6 +155,8 @@ func GetClientFromContext() (*Client, error) {
 	clientSecret := viper.GetString("clientSecret")
 	serverIndex := viper.GetInt("serverIndex")
 	accessToken := viper.GetString("accessToken")
+	adminAccessToken := viper.GetString("adminAccessToken")
+	activeTokenType := viper.GetString("activeTokenType")
 	expiresAtStr := viper.GetString("expiresAt")
 	influxDbId := viper.GetInt("influxdbId")
 	org := viper.GetString("org")
@@ -132,22 +174,28 @@ func GetClientFromContext() (*Client, error) {
 	}
 
 	// Check if the token is still valid.
-	if time.Now().After(expiresAt) {
+	if (activeTokenType == "connected" || !options.SkipTokenExpiration) && isTokenExpired(expiresAt) {
 		return nil, errors.New("access token expired. Please run 'connect' command")
 	}
 
 	// Recreate and store the client from configuration.
 	globalClient = &Client{
-		ClientId:     clientId,
-		ClientSecret: clientSecret,
-		AccessToken:  accessToken,
-		ServerIndex:  serverIndex,
-		ExpiresAt:    expiresAt,
-		InfluxDbId:   influxDbId,
-		Org:          org,
-		Env:          env,
+		ClientId:         clientId,
+		ClientSecret:     clientSecret,
+		AccessToken:      accessToken,
+		AdminAccessToken: adminAccessToken,
+		ServerIndex:      serverIndex,
+		ExpiresAt:        expiresAt,
+		InfluxDbId:       influxDbId,
+		Org:              org,
+		Env:              env,
+		ActiveTokenType:  activeTokenType,
 	}
 	return globalClient, nil
+}
+
+func isTokenExpired(expiresAt time.Time) bool {
+	return time.Now().After(expiresAt)
 }
 
 func (c *Client) SetOrg(org string) {
@@ -157,6 +205,12 @@ func (c *Client) SetOrg(org string) {
 
 func (c *Client) SetEnv(env string) {
 	c.Env = env
+	setGlobalClient(c)
+}
+
+func (c *Client) SetAdminAccessToken(accessToken string) {
+	c.ActiveTokenType = "admin"
+	c.AdminAccessToken = accessToken
 	setGlobalClient(c)
 }
 
@@ -176,11 +230,19 @@ func (c *Client) getServerHost() (string, error) {
 	return anypointServers[c.ServerIndex], nil
 }
 
+// returns the token to use
+func (c *Client) getEffectiveToken() string {
+	if c.ActiveTokenType != "admin" {
+		return c.AdminAccessToken
+	}
+	return c.AccessToken
+}
+
 // GetBusinessGroups retrieves the business groups.
 func (c *Client) GetBusinessGroup(ctx context.Context, orgId string) (*org.MasterBGDetail, error) {
-	orgCtx := context.WithValue(context.WithValue(ctx, org.ContextAccessToken, c.AccessToken), org.ContextServerIndex, c.ServerIndex)
+	orgCtx := context.WithValue(context.WithValue(ctx, org.ContextAccessToken, c.getEffectiveToken()), org.ContextServerIndex, c.ServerIndex)
 	orgClient := org.NewAPIClient(org.NewConfiguration())
-	org, httpr, err := orgClient.DefaultApi.OrganizationsOrgIdGet(orgCtx, orgId).Execute()
+	orgResult, httpr, err := orgClient.DefaultApi.OrganizationsOrgIdGet(orgCtx, orgId).Execute()
 	if err != nil {
 		var details string
 		if httpr != nil && httpr.StatusCode >= 400 {
@@ -190,10 +252,10 @@ func (c *Client) GetBusinessGroup(ctx context.Context, orgId string) (*org.Maste
 		} else {
 			details = err.Error()
 		}
-		return nil, errors.New("error retrieving business groups: " + details)
+		return nil, errors.New(details)
 	}
 	defer httpr.Body.Close()
-	return &org, nil
+	return &orgResult, nil
 }
 
 // GetEnvironments retrieves environments for a given business group ID.
@@ -211,7 +273,7 @@ func (c *Client) GetApps(ctx context.Context, orgID, envID string, filters ...Ap
 	if err != nil {
 		return nil, err
 	}
-
+	token := c.getEffectiveToken()
 	url := host + "/armui/api/v1/applications"
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -221,7 +283,7 @@ func (c *Client) GetApps(ctx context.Context, orgID, envID string, filters ...Ap
 	// Set required headers.
 	req.Header.Set("x-anypnt-org-id", orgID)
 	req.Header.Set("x-anypnt-env-id", envID)
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -244,106 +306,4 @@ func (c *Client) GetApps(ctx context.Context, orgID, envID string, filters ...Ap
 		apps = FilterApps(apps, filters...)
 	}
 	return apps, nil
-}
-
-// GetLastCalledTime fetches the last time the given app was called.
-// It uses a query that calculates the 75th percentile of the avg_request_count
-// over the specified time window. It returns the timestamp of the latest data point.
-// The timeWindow parameter is a string (e.g. "15m", "24h", "3d") to define the lookback period.
-func (c *Client) GetLastCalledTime(ctx context.Context, orgID, envID string, app App, timeWindow string) (time.Time, error) {
-	templateCH1 := `SELECT percentile("avg_request_count", 75) FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`
-	templateRTF := `SELECT percentile("avg_request_count", 75) FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "cluster_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`
-	var query string
-
-	if FilterCH1(app) {
-		query = fmt.Sprintf(
-			templateCH1,
-			orgID, envID, app.Details.Domain, timeWindow,
-		)
-	} else if FilterRTF(app) {
-		query = fmt.Sprintf(
-			templateRTF,
-			orgID, envID, app.Target.ID, app.Artifact.Name, timeWindow,
-		)
-	} else {
-		fmt.Printf("Unsupported app target: %v\n", app)
-		return time.Time{}, fmt.Errorf("unsupported app type: %s", app.Target.Type)
-	}
-
-	params := QueryParams{
-		OrgID:      orgID,
-		EnvID:      envID,
-		AppID:      app.ID,
-		Query:      query,
-		InfluxDBId: c.InfluxDbId,
-	}
-
-	resp, err := c.queryInfluxDB(ctx, params)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("error querying last called time: %w", err)
-	}
-
-	// Look for the last timestamp in the returned series.
-	if len(resp.Results) > 0 && len(resp.Results[0].Series) > 0 {
-		series := resp.Results[0].Series[0]
-		if len(series.Values) > 0 {
-			// The first column is "time" (epoch in ms)
-			// Use the last value in the list.
-			lastVal := series.Values[len(series.Values)-1][0]
-			if ts, ok := lastVal.(float64); ok {
-				return time.Unix(0, int64(ts)*int64(time.Millisecond)), nil
-			}
-		}
-	}
-
-	return time.Time{}, nil
-}
-
-// GetRequestCount fetches the total number of requests for the given app
-// over the specified time window.
-// The timeWindow parameter is a string (e.g. "24h", "3d") to define the lookback period.
-func (c *Client) GetRequestCount(ctx context.Context, orgID, envID string, app App, timeWindow string) (int, error) {
-	templateCH1 := `SELECT sum("avg_request_count") FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`
-	templateRTF := `SELECT sum("avg_request_count") FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "cluster_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`
-	var query string
-
-	if FilterCH1(app) {
-		query = fmt.Sprintf(
-			templateCH1,
-			orgID, envID, app.Details.Domain, timeWindow,
-		)
-	} else if FilterRTF(app) {
-		query = fmt.Sprintf(
-			templateRTF,
-			orgID, envID, app.Target.ID, app.Artifact.Name, timeWindow,
-		)
-	} else {
-		return 0, fmt.Errorf("unsupported app type: %s", app.Target.Type)
-	}
-
-	params := QueryParams{
-		OrgID:      orgID,
-		EnvID:      envID,
-		AppID:      app.ID,
-		Query:      query,
-		InfluxDBId: c.InfluxDbId,
-	}
-
-	resp, err := c.queryInfluxDB(ctx, params)
-	if err != nil {
-		return 0, fmt.Errorf("error querying request count: %w", err)
-	}
-
-	total := 0
-	if len(resp.Results) > 0 && len(resp.Results[0].Series) > 0 {
-		series := resp.Results[0].Series[0]
-		for _, entry := range series.Values {
-			if countVal, ok := entry[1].(float64); ok {
-				total += int(countVal)
-			}
-		}
-		return total, nil
-	}
-
-	return 0, nil
 }

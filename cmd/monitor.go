@@ -209,12 +209,12 @@ Filters:
 		}
 
 		// Save/Load org and env
-		if client.IsOrgEmpty() {
+		if orgID != "" {
 			client.SetOrg(orgID)
 		} else {
 			orgID = client.Org
 		}
-		if client.IsEnvEmpty() {
+		if envID != "" {
 			client.SetEnv(envID)
 		} else {
 			envID = client.Env
@@ -228,13 +228,10 @@ Filters:
 		switch strings.ToLower(appType) {
 		case "cloudhub":
 			typeFilters = append(typeFilters, anypoint.FilterCH1)
-			break
 		case "rtf":
 			typeFilters = append(typeFilters, anypoint.FilterRTF)
-			break
 		case "all":
 			typeFilters = append(typeFilters, anypoint.FilterCH1OrRTF)
-			break
 		}
 
 		// Retrieve apps to monitor.
