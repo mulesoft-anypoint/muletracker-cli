@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"text/tabwriter"
 	"time"
 
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
@@ -122,24 +121,8 @@ func filterAppResults(results []AppResult, filterFlag string) []AppResult {
 	return filtered
 }
 
-// printSummary prints a condensed summary table for multiple apps.
-func printSummary(results []AppResult) {
-	fmt.Println("")
-	printAppsSummaryTable(results)
-}
-
-// printAppsSummaryTable prints a condensed table of app monitoring results
-// using tabwriter for alignment.
-func printAppsSummaryTable(results []AppResult) {
-	// Create a new tabwriter with a minimum width of 0, tab width of 8,
-	// padding of 2, and using a tab ('\t') as the padding character.
-	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
-
-	// Print header row.
-	fmt.Fprintln(w, "App ID\tType\tLast Called\tRequest Count")
-	fmt.Fprintln(w, "------\t----\t-----------\t-------------")
-
-	// Iterate over the results and print each row.
+func AppResult2Map(results []AppResult) ([]map[string]interface{}, []string) {
+	data := make([]map[string]interface{}, 0)
 	for _, r := range results {
 		var lastCalled string
 		if r.LastCalled.IsZero() {
@@ -147,24 +130,28 @@ func printAppsSummaryTable(results []AppResult) {
 		} else {
 			lastCalled = r.LastCalled.Format(time.RFC1123)
 		}
-		// Each column is separated by a tab character.
-		fmt.Fprintf(w, "%s\t%s\t%s\t%d\n", r.AppID, r.AppType, lastCalled, r.RequestCount)
+		data = append(data, map[string]interface{}{
+			"App ID":        r.AppID,
+			"Type":          r.AppType,
+			"Last Called":   lastCalled,
+			"Request Count": r.RequestCount,
+		})
 	}
+	order := []string{"App ID", "Type", "Request Count", "Last Called"}
 
-	// Flush the writer to ensure output is written.
-	w.Flush()
+	return data, order
 }
 
-// printDetailedResult prints detailed monitoring info for a single app.
-func printDetailedResult(res AppResult) {
-	data := map[string]interface{}{
-		"App ID":           res.AppID,
-		"Last Called Time": res.LastCalled,
-		"Request Count":    res.RequestCount,
-		"LC Window":        res.LCWindow,
-		"RC Window":        res.RCWindow,
-	}
-	PrintSimpleResults("Monitoring Results", data)
+// printAppsSummaryTable prints a condensed table of app monitoring results
+// using tabwriter for alignment.
+func printAppsSummaryTable(results []AppResult) {
+	data, order := AppResult2Map(results)
+	PrintGenericTable(data, order)
+}
+
+func ExportAppResultToCSV(fileName string, results []AppResult) error {
+	data, order := AppResult2Map(results)
+	return ExportGenericCSV(fileName, data, order)
 }
 
 // ----- Main Command ----- //
@@ -246,36 +233,37 @@ Filters:
 			fmt.Println("No apps found for the given org and env.")
 			return
 		}
-
+		var finalResults []AppResult
 		// If a single app was specified, run in single-app mode.
 		if appID != "" {
 			result := monitorSingleApp(ctx, client, orgID, envID, apps[0], lcWindow, rcWindow)
+			fmt.Printf("\n* Using last-called window: %s\n", lcWindow)
+			fmt.Printf("* Using request count window: %s\n", rcWindow)
+			fmt.Printf("\n* Collection monitoring data for %s application only\n", appID)
 			if result.Err != nil {
 				fmt.Printf("Error monitoring app %s: %v\n", appID, result.Err)
 				return
 			}
-			printDetailedResult(result)
-			return
-		}
-
-		// Monitor all apps concurrently.
-		allResults := monitorAppsConcurrently(ctx, client, orgID, envID, lcWindow, rcWindow, apps)
-		fmt.Printf("\n* Using last-called window: %s\n", lcWindow)
-		fmt.Printf("* Using request count window: %s\n", rcWindow)
-		fmt.Printf("* Found %d apps to monitor.\n", len(apps))
-		fmt.Printf("* Collected monitoring data for %d apps.\n", len(allResults))
-
-		// Apply filter.
-		finalResults := filterAppResults(allResults, dataFilter)
-		fmt.Printf("* After applying filter '%s', %d apps remain.\n", dataFilter, len(finalResults))
-		if len(finalResults) == 0 {
-			fmt.Println("No apps match the filter criteria.")
-			return
+			finalResults = []AppResult{result}
+		} else {
+			// Monitor all apps concurrently.
+			allResults := monitorAppsConcurrently(ctx, client, orgID, envID, lcWindow, rcWindow, apps)
+			fmt.Printf("\n* Using last-called window: %s\n", lcWindow)
+			fmt.Printf("* Using request count window: %s\n", rcWindow)
+			fmt.Printf("* Found %d apps to monitor.\n", len(apps))
+			fmt.Printf("* Collected monitoring data for %d apps.\n", len(allResults))
+			// Apply filter.
+			finalResults = filterAppResults(allResults, dataFilter)
+			fmt.Printf("* After applying filter '%s', %d apps remain.\n", dataFilter, len(finalResults))
+			if len(finalResults) == 0 {
+				fmt.Println("No apps match the filter criteria.")
+				return
+			}
 		}
 
 		// If export flag is provided, export results to CSV.
 		if exportFile != "" {
-			err := ExportResultsToCSV(exportFile, finalResults)
+			err := ExportAppResultToCSV(exportFile, finalResults)
 			if err != nil {
 				fmt.Printf("Error exporting results to CSV: %v\n", err)
 				return

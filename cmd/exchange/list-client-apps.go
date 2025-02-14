@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"text/tabwriter"
 	"time"
 
 	"github.com/mulesoft-anypoint/anypoint-client-go/exchange_apps"
@@ -70,7 +69,7 @@ func ListExchClientAppsConcurrently(ctx context.Context, client *anypoint.Client
 }
 
 // Returns the count of contracts by status
-func countContractsByStatus(contracts []exchange_apps.GetExchangeAppContractsResponseInner) map[string]int {
+func CountContractsByStatus(contracts []exchange_apps.GetExchangeAppContractsResponseInner) map[string]int {
 	data := make(map[string]int)
 	for _, contract := range contracts {
 		if val, ok := data[contract.GetStatus()]; ok {
@@ -84,7 +83,7 @@ func countContractsByStatus(contracts []exchange_apps.GetExchangeAppContractsRes
 
 // filterClientAppResults applies the filter flag to the full list of results.
 // filterFlag can be: "all", "nonempty", or "empty".
-func filterClientAppResults(results []ClientAppResult, filterFlag string) []ClientAppResult {
+func FilterClientAppResults(results []ClientAppResult, filterFlag string) []ClientAppResult {
 	var filtered []ClientAppResult
 	switch strings.ToLower(filterFlag) {
 	case "nonempty":
@@ -106,41 +105,51 @@ func filterClientAppResults(results []ClientAppResult, filterFlag string) []Clie
 	return filtered
 }
 
-// printAppsSummaryTable prints a condensed table of app monitoring results
-// using tabwriter for alignment.
-func printClientAppsSummaryTable(results []ClientAppResult) {
-	// Create a new tabwriter with a minimum width of 0, tab width of 8,
-	// padding of 2, and using a tab ('\t') as the padding character.
-	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
-
-	// Print header row.
-	fmt.Println()
-	fmt.Fprintln(w, "App ID\tApp Name\tClient Id\tContracts")
-	fmt.Fprintln(w, "------\t--------\t---------\t---------")
-
-	// Iterate over the results and print each row.
+func ClientAppResult2Map(results []ClientAppResult) ([]map[string]interface{}, []string) {
+	data := make([]map[string]interface{}, 0)
 	for _, r := range results {
-		l := len(r.Contracts)
-		contractData := "empty"
-		if l > 0 {
-			countMap := countContractsByStatus(r.Contracts)
-			arr := []string{fmt.Sprintf("Total %d", l)}
-			for k, v := range countMap {
-				arr = append(arr, fmt.Sprintf("%s %d", k, v))
-			}
-			contractData = strings.Join(arr[:], " / ")
+		total := len(r.Contracts)
+		countMap := CountContractsByStatus(r.Contracts)
+		approved := 0
+		revoked := 0
+		pending := 0
+		if val, ok := countMap["APPROVED"]; ok {
+			approved = val
 		}
-
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", r.ClientApp.GetId(), r.ClientApp.GetName(), r.ClientApp.GetClientId(), contractData)
+		if val, ok := countMap["REVOKED"]; ok {
+			revoked = val
+		}
+		if val, ok := countMap["PENDING"]; ok {
+			pending = val
+		}
+		data = append(data, map[string]interface{}{
+			"App ID":             r.ClientApp.GetId(),
+			"App Name":           r.ClientApp.GetName(),
+			"Client ID":          r.ClientApp.GetClientId(),
+			"Total Contracts":    total,
+			"Approved Contracts": approved,
+			"Revoked Contracts":  revoked,
+			"Pending Contracts":  pending,
+		})
 	}
+	order := []string{"App ID", "App Name", "Client ID", "Total Contracts", "Approved Contracts", "Revoked Contracts", "Pending Contracts"}
 
-	// Flush the writer to ensure output is written.
-	w.Flush()
+	return data, order
 }
 
-var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List Exchange applications",
+func PrintClientAppsSummaryTable(results []ClientAppResult) {
+	data, order := ClientAppResult2Map(results)
+	PrintGenericTable(data, order)
+}
+
+func ExportClientAppsSummaryTable(fileName string, results []ClientAppResult) error {
+	data, order := ClientAppResult2Map(results)
+	return ExportGenericCSV(fileName, data, order)
+}
+
+var listClientAppsCmd = &cobra.Command{
+	Use:   "list-client-apps",
+	Short: "List Exchange Client applications",
 	Long: `List all or parts of Exchange client applications.
 		If you need to get all the available exchange apps on your organization (not just the client apps created by the user making the Query).
     You need to use this call with your Master Org id, a bearer token for an Admin user, and the query parameter 'targetAdminSite' set to 'true'. This call will return every application (with pagination if more than the set limit) for this particular Anypoint Account.`,
@@ -150,6 +159,7 @@ var listCmd = &cobra.Command{
 		filterContract, _ := cmd.Flags().GetString("filter-contract")
 		orgID, _ := cmd.Flags().GetString("org")
 		adminToken, _ := cmd.Flags().GetString("adminToken")
+		exportFile, _ := cmd.Flags().GetString("out")
 
 		// Retrieve the authenticated client.
 		var client *anypoint.Client
@@ -188,20 +198,34 @@ var listCmd = &cobra.Command{
 		allResults := ListExchClientAppsConcurrently(ctx, client, orgID, list)
 		fmt.Printf("* Collected contract data for %d apps.\n", len(allResults))
 		// Apply filter.
-		finalResults := filterClientAppResults(allResults, filterContract)
+		finalResults := FilterClientAppResults(allResults, filterContract)
 		fmt.Printf("* After applying filter '%s', %d client apps remain.\n", filterContract, len(finalResults))
 		if len(finalResults) == 0 {
 			fmt.Println("No apps match the filter criteria.")
 			return
 		}
 
-		printClientAppsSummaryTable(finalResults)
+		// If export flag is provided, export results to CSV.
+		if exportFile != "" {
+			err := ExportClientAppsSummaryTable(exportFile, finalResults)
+			if err != nil {
+				fmt.Printf("Error exporting results to CSV: %v\n", err)
+				return
+			}
+			fmt.Printf("\nResults successfully exported to %s\n", exportFile)
+		} else {
+			// Otherwise, print a summary table.
+			PrintClientAppsSummaryTable(finalResults)
+		}
 	},
 }
 
 func init() {
-	listCmd.Flags().StringP("org", "o", "", "The Business Group ID. This should be the root org id")
-	listCmd.Flags().StringP("adminToken", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
+	listClientAppsCmd.Flags().String("org", "", "The Business Group ID. This should be the root org id")
+	listClientAppsCmd.Flags().StringP("adminToken", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
 	//Filters
-	listCmd.Flags().String("filter-contract", "all", "Filter results: all (default), nonempty (only client apps with contracts), or empty (only client apps with no contracts)")
+	listClientAppsCmd.Flags().String("filter-contract", "all", "Filter results: all (default), nonempty (only client apps with contracts), or empty (only client apps with no contracts)")
+
+	// export flags
+	listClientAppsCmd.Flags().StringP("out", "o", "", "If provided, export the results to the specified CSV file")
 }

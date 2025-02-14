@@ -232,7 +232,7 @@ func (c *Client) getServerHost() (string, error) {
 
 // returns the token to use
 func (c *Client) getEffectiveToken() string {
-	if c.ActiveTokenType != "admin" {
+	if c.ActiveTokenType == "admin" {
 		return c.AdminAccessToken
 	}
 	return c.AccessToken

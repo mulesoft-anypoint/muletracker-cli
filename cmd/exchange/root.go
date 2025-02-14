@@ -13,7 +13,7 @@ var ExchangeCmd = &cobra.Command{
 
 func init() {
 	// Add subcommands to ExchangeCmd.
-	ExchangeCmd.AddCommand(listCmd)
+	ExchangeCmd.AddCommand(listClientAppsCmd)
 	ExchangeCmd.AddCommand(createCmd)
 	ExchangeCmd.AddCommand(deleteCmd)
 

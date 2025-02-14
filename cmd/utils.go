@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/fatih/color"
@@ -120,9 +121,63 @@ func PrintSimpleResults(header string, data map[string]interface{}) {
 	fmt.Println(divider)
 }
 
-// ExportResultsToCSV writes the provided AppResult slice to a CSV file.
-// The CSV file will contain a header row and one row per result.
-func ExportResultsToCSV(fileName string, results []AppResult) error {
+// PrintGenericTable prints a table from a slice of map[string]interface{}.
+// Each map represents a row and keys represent columns.
+// An optional headerOrder slice can be provided to control column order.
+// If headerOrder is empty, the union of keys is computed and sorted alphabetically.
+func PrintGenericTable(data []map[string]interface{}, headerOrder []string) {
+	if len(data) == 0 {
+		fmt.Println("No data to display.")
+		return
+	}
+
+	// If no header order is provided, compute the union of keys from all rows.
+	if len(headerOrder) == 0 {
+		headerMap := make(map[string]struct{})
+		for _, row := range data {
+			for key := range row {
+				headerMap[key] = struct{}{}
+			}
+		}
+		for key := range headerMap {
+			headerOrder = append(headerOrder, key)
+		}
+		sort.Strings(headerOrder)
+	}
+
+	// Create a new tabwriter with appropriate settings.
+	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
+
+	// Print header row.
+	fmt.Fprintln(w, strings.Join(headerOrder, "\t"))
+
+	// Print a separator row.
+	separator := make([]string, len(headerOrder))
+	for i, h := range headerOrder {
+		separator[i] = strings.Repeat("-", len(h))
+	}
+	fmt.Fprintln(w, strings.Join(separator, "\t"))
+
+	// Print each row using the defined header order.
+	for _, row := range data {
+		var rowValues []string
+		for _, key := range headerOrder {
+			if val, ok := row[key]; ok {
+				rowValues = append(rowValues, fmt.Sprintf("%v", val))
+			} else {
+				rowValues = append(rowValues, "")
+			}
+		}
+		fmt.Fprintln(w, strings.Join(rowValues, "\t"))
+	}
+
+	w.Flush()
+}
+
+// ExportGenericCSV writes a slice of map[string]interface{} to a CSV file.
+// The CSV file will contain a header row (either provided via headerOrder or computed)
+// and one row per data map.
+func ExportGenericCSV(fileName string, data []map[string]interface{}, headerOrder []string) error {
 	// Open the file for writing (create or truncate)
 	file, err := os.Create(fileName)
 	if err != nil {
@@ -133,30 +188,37 @@ func ExportResultsToCSV(fileName string, results []AppResult) error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	// Write header row.
-	header := []string{"App ID", "Last Called", "Request Count", "LC Window", "RC Window"}
-	if err := writer.Write(header); err != nil {
+	// If no header order is provided, compute the union of keys from the data.
+	if len(headerOrder) == 0 {
+		headerMap := make(map[string]struct{})
+		for _, row := range data {
+			for key := range row {
+				headerMap[key] = struct{}{}
+			}
+		}
+		for key := range headerMap {
+			headerOrder = append(headerOrder, key)
+		}
+		sort.Strings(headerOrder)
+	}
+
+	// Write the header row.
+	if err := writer.Write(headerOrder); err != nil {
 		return fmt.Errorf("error writing header to CSV: %w", err)
 	}
 
 	// Write each row.
-	for _, res := range results {
-		var lastCalled string
-		if res.LastCalled.IsZero() {
-			lastCalled = "No data"
-		} else {
-			// Format time in a friendly format.
-			lastCalled = res.LastCalled.Format(time.RFC1123)
-		}
-		record := []string{
-			res.AppID,
-			lastCalled,
-			fmt.Sprintf("%d", res.RequestCount),
-			res.LCWindow,
-			res.RCWindow,
+	for _, row := range data {
+		record := make([]string, len(headerOrder))
+		for i, key := range headerOrder {
+			if val, ok := row[key]; ok {
+				record[i] = fmt.Sprintf("%v", val)
+			} else {
+				record[i] = ""
+			}
 		}
 		if err := writer.Write(record); err != nil {
-			return fmt.Errorf("error writing record for app %s: %w", res.AppID, err)
+			return fmt.Errorf("error writing record to CSV: %w", err)
 		}
 	}
 
