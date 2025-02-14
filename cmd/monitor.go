@@ -194,6 +194,7 @@ Filters:
 		rcWindow, _ := cmd.Flags().GetString("request-count-window")
 		dataFilter, _ := cmd.Flags().GetString("filter")
 		appType, _ := cmd.Flags().GetString("app-type")
+		exportFile, _ := cmd.Flags().GetString("out")
 
 		// Retrieve the previously connected client from context.
 		client, err := anypoint.GetClientFromContext()
@@ -275,8 +276,18 @@ Filters:
 			return
 		}
 
-		// Print a summary if there are multiple apps.
-		printSummary(finalResults)
+		// If export flag is provided, export results to CSV.
+		if exportFile != "" {
+			err := ExportResultsToCSV(exportFile, finalResults)
+			if err != nil {
+				fmt.Printf("Error exporting results to CSV: %v\n", err)
+				return
+			}
+			fmt.Printf("\nResults successfully exported to %s\n", exportFile)
+		} else {
+			// Otherwise, print a summary table.
+			printAppsSummaryTable(finalResults)
+		}
 
 	},
 }
@@ -298,7 +309,6 @@ func init() {
 	monitorCmd.Flags().String("filter", "all", "Filter results: all (default), nonempty (only apps with monitoring data), or empty (only apps with no data)")
 	monitorCmd.Flags().String("app-type", "all", "Filter apps by type: all (default), cloudhub (only CloudHub apps), or rtf (only RTF apps)")
 
-	// Mark the required flags.
-	// monitorCmd.MarkFlagRequired("org")
-	// monitorCmd.MarkFlagRequired("env")
+	// export flag
+	monitorCmd.Flags().StringP("out", "o", "", "If provided, export the results to the specified CSV file")
 }

@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"context"
+	"encoding/csv"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -91,4 +93,47 @@ func PrintSimpleResults(header string, data map[string]interface{}) {
 
 	// Print the divider again.
 	fmt.Println(divider)
+}
+
+// ExportResultsToCSV writes the provided AppResult slice to a CSV file.
+// The CSV file will contain a header row and one row per result.
+func ExportResultsToCSV(fileName string, results []AppResult) error {
+	// Open the file for writing (create or truncate)
+	file, err := os.Create(fileName)
+	if err != nil {
+		return fmt.Errorf("failed to create file %q: %w", fileName, err)
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// Write header row.
+	header := []string{"App ID", "Last Called", "Request Count", "LC Window", "RC Window"}
+	if err := writer.Write(header); err != nil {
+		return fmt.Errorf("error writing header to CSV: %w", err)
+	}
+
+	// Write each row.
+	for _, res := range results {
+		var lastCalled string
+		if res.LastCalled.IsZero() {
+			lastCalled = "No data"
+		} else {
+			// Format time in a friendly format.
+			lastCalled = res.LastCalled.Format(time.RFC1123)
+		}
+		record := []string{
+			res.AppID,
+			lastCalled,
+			fmt.Sprintf("%d", res.RequestCount),
+			res.LCWindow,
+			res.RCWindow,
+		}
+		if err := writer.Write(record); err != nil {
+			return fmt.Errorf("error writing record for app %s: %w", res.AppID, err)
+		}
+	}
+
+	return nil
 }
