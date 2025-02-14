@@ -32,7 +32,7 @@ var environmentsCmd = &cobra.Command{
 		}
 
 		// Display the client info in a colorful way.
-		PrintClientInfo(client)
+		PrintClientInfo(ctx, client)
 
 		// Retrieve environments for the provided business group.
 		environments, err := client.GetEnvironments(ctx, businessGroupID)
