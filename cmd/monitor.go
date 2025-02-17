@@ -22,8 +22,6 @@ type AppResult struct {
 	RCWindow     string // Request Count window used in the query
 }
 
-var includeEmpty bool
-
 // ----- Helper Functions ----- //
 
 // getAppsToMonitor retrieves the list of apps based on the provided flags.
@@ -185,13 +183,13 @@ Filters:
 		// Retrieve the previously connected client from context.
 		client, err := anypoint.GetClientFromContext()
 		if err != nil {
-			fmt.Printf("Error retrieving client: %v\n", err)
+			PrintError("Error retrieving client %v\n", err)
 			return
 		}
 
 		// Check that the required flags are provided.
 		if (client.IsOrgEmpty() && orgID == "") || (client.IsEnvEmpty() && envID == "") {
-			fmt.Println("Please provide --org, --env flags")
+			PrintError("Please provide --org, --env flags")
 			return
 		}
 
@@ -220,7 +218,7 @@ Filters:
 		// Retrieve apps to monitor.
 		apps, err := getAppsToMonitor(ctx, client, orgID, envID, appID, typeFilters...)
 		if err != nil {
-			fmt.Printf("Error retrieving apps: %v\n", err)
+			PrintError("Error retrieving apps: %v\n", err)
 			return
 		}
 
@@ -236,7 +234,7 @@ Filters:
 			fmt.Printf("* Using request count window: %s\n", rcWindow)
 			fmt.Printf("\n* Collection monitoring data for %s application only\n", appID)
 			if result.Err != nil {
-				fmt.Printf("Error monitoring app %s: %v\n", appID, result.Err)
+				PrintError("Error monitoring app %s: %v\n", appID, result.Err)
 				return
 			}
 			finalResults = []AppResult{result}
@@ -260,7 +258,7 @@ Filters:
 		if exportFile != "" {
 			err := ExportAppResultToCSV(exportFile, finalResults)
 			if err != nil {
-				fmt.Printf("Error exporting results to CSV: %v\n", err)
+				PrintError("Error exporting results to CSV: %v\n", err)
 				return
 			}
 			fmt.Printf("\nResults successfully exported to %s\n", exportFile)

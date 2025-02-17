@@ -20,14 +20,14 @@ var environmentsCmd = &cobra.Command{
 		ctx := cmd.Context()
 		businessGroupID, _ := cmd.Flags().GetString("org")
 		if businessGroupID == "" {
-			fmt.Println("Please provide a business group ID using the --org flag.")
+			PrintError("Please provide a business group ID using the --org flag.")
 			return
 		}
 
 		// Retrieve the authenticated client.
 		client, err := anypoint.GetClientFromContext()
 		if err != nil {
-			fmt.Printf("Error retrieving client: %v\n", err)
+			PrintError("Error retrieving client: %v\n", err)
 			return
 		}
 
@@ -37,7 +37,7 @@ var environmentsCmd = &cobra.Command{
 		// Retrieve environments for the provided business group.
 		environments, err := client.GetEnvironments(ctx, businessGroupID)
 		if err != nil {
-			fmt.Printf("Error retrieving environments: %v\n", err)
+			PrintError("Error retrieving environments: %v\n", err)
 			return
 		}
 
@@ -57,13 +57,13 @@ var environmentsCmd = &cobra.Command{
 		fmt.Print("Select environment number to use: ")
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Printf("Error reading input: %v\n", err)
+			PrintError("Error reading input: %v\n", err)
 			return
 		}
 		input = strings.TrimSpace(input)
 		selection, err := strconv.Atoi(input)
 		if err != nil || selection < 1 || selection > len(environments) {
-			fmt.Println("Invalid selection.")
+			PrintError("Error: Invalid selection.")
 			return
 		}
 

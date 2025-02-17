@@ -38,21 +38,21 @@ var connectCmd = &cobra.Command{
 
 		// Validate that we have credentials.
 		if clientId == "" || clientSecret == "" {
-			fmt.Println("clientId and clientSecret are required. Please provide them via flags or ensure they are persisted in configuration.")
+			PrintError("Error: clientId and clientSecret are required. Please provide them via flags or ensure they are persisted in configuration.")
 			return
 		}
 
 		// Validate control plane and determine the server index.
 		serverIndex := cplane2serverindex(controlPlane)
 		if serverIndex == -1 {
-			fmt.Println("Invalid control plane. Valid values are 'eu', 'us', or 'gov'.")
+			PrintError("Error: Invalid control plane. Valid values are 'eu', 'us', or 'gov'.")
 			return
 		}
 
 		// Create the client; this will obtain an access token and set its expiration.
 		client, err := anypoint.NewClient(ctx, serverIndex, clientId, clientSecret)
 		if err != nil {
-			fmt.Printf("Error connecting to Anypoint: %v\n", err)
+			PrintError("Error connecting to Anypoint: %v\n", err)
 			return
 		}
 
