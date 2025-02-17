@@ -160,7 +160,6 @@ var listClientAppsCmd = &cobra.Command{
 		orgID, _ := cmd.Flags().GetString("org")
 		adminToken, _ := cmd.Flags().GetString("adminToken")
 		exportFile, _ := cmd.Flags().GetString("out")
-
 		// Retrieve the authenticated client.
 		var client *anypoint.Client
 		var err error
@@ -178,13 +177,15 @@ var listClientAppsCmd = &cobra.Command{
 				return
 			}
 		}
-		// Save/Load org and env
+		//Read Org ID
 		if client.IsOrgEmpty() && orgID == "" {
 			fmt.Println("Please provide --org flag")
 			return
 		}
 		if orgID == "" {
 			orgID = client.Org
+		} else {
+			client.SetOrg(orgID)
 		}
 		//Get All exchange client apps
 		list, err := client.GetExchangeClientApps(ctx, orgID, true)

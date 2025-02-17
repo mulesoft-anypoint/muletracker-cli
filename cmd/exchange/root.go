@@ -14,8 +14,8 @@ var ExchangeCmd = &cobra.Command{
 func init() {
 	// Add subcommands to ExchangeCmd.
 	ExchangeCmd.AddCommand(listClientAppsCmd)
-	ExchangeCmd.AddCommand(createCmd)
-	ExchangeCmd.AddCommand(deleteCmd)
+	ExchangeCmd.AddCommand(createClientAppCmd)
+	ExchangeCmd.AddCommand(deleteClientAppCmd)
 
 	// Here you can add persistent flags for the exchange group if needed.
 	// For example, a flag to specify an environment or organization ID if they are common to all subcommands.

@@ -200,6 +200,7 @@ func isTokenExpired(expiresAt time.Time) bool {
 
 func (c *Client) SetOrg(org string) {
 	c.Org = org
+	c.Env = ""
 	setGlobalClient(c)
 }
 

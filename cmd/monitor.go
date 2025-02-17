@@ -170,7 +170,6 @@ Filters:
   --app-type: "all" (default), "cloudhub" (only CloudHub apps), or "rtf" (only RTF apps)
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Retrieve the context from the command.
 		ctx := cmd.Context()
 
 		// Retrieve flag values.
@@ -196,15 +195,11 @@ Filters:
 			return
 		}
 
-		// Save/Load org and env
-		if orgID != "" {
-			client.SetOrg(orgID)
-		} else {
+		//Load org and env if necessary
+		if orgID == "" {
 			orgID = client.Org
 		}
-		if envID != "" {
-			client.SetEnv(envID)
-		} else {
+		if envID == "" {
 			envID = client.Env
 		}
 
@@ -282,9 +277,9 @@ func init() {
 	rootCmd.AddCommand(monitorCmd)
 
 	// Define flags for organization, environment, and application IDs.
-	monitorCmd.Flags().String("org", "", "Organization ID")
-	monitorCmd.Flags().String("env", "", "Environment ID")
-	monitorCmd.Flags().String("app", "", "Application ID to monitor")
+	monitorCmd.Flags().String("org", "", "The Business Group ID. If not provided, the id from the saved context will be loaded if present.")
+	monitorCmd.Flags().String("env", "", "The Environment ID. If not provided, the id from the saved context will be loaded if present")
+	monitorCmd.Flags().String("app", "", "The Application to monitor (optional)")
 
 	// Define flags for specifying the time window for queries.
 	monitorCmd.Flags().String("last-called-window", "15m", "Time window for last-called query (e.g., 15m, 1h, 24h)")
