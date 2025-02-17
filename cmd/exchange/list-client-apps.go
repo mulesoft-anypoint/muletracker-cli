@@ -166,20 +166,20 @@ var listClientAppsCmd = &cobra.Command{
 		if adminToken != "" {
 			client, err = anypoint.GetClientFromContext(anypoint.WithSkipTokenExpiration())
 			if err != nil {
-				fmt.Printf("Error retrieving client: %v\n", err)
+				PrintError("Error retrieving client: %v\n", err)
 				return
 			}
 			client.SetAdminAccessToken(adminToken)
 		} else {
 			client, err = anypoint.GetClientFromContext()
 			if err != nil {
-				fmt.Printf("Error retrieving client: %v\n", err)
+				PrintError("Error retrieving client: %v\n", err)
 				return
 			}
 		}
 		//Read Org ID
 		if client.IsOrgEmpty() && orgID == "" {
-			fmt.Println("Please provide --org flag")
+			PrintError("Please provide --org flag")
 			return
 		}
 		if orgID == "" {
@@ -190,7 +190,7 @@ var listClientAppsCmd = &cobra.Command{
 		//Get All exchange client apps
 		list, err := client.GetExchangeClientApps(ctx, orgID, true)
 		if err != nil {
-			fmt.Printf("Error retrieving Exchange Client Apps %v/n", err)
+			PrintError("Error retrieving Exchange Client Apps %v/n", err)
 			return
 		}
 		// Display the client info in a colorful way.
@@ -205,12 +205,11 @@ var listClientAppsCmd = &cobra.Command{
 			fmt.Println("No apps match the filter criteria.")
 			return
 		}
-
 		// If export flag is provided, export results to CSV.
 		if exportFile != "" {
 			err := ExportClientAppsSummaryTable(exportFile, finalResults)
 			if err != nil {
-				fmt.Printf("Error exporting results to CSV: %v\n", err)
+				PrintError("Error exporting results to CSV: %v\n", err)
 				return
 			}
 			fmt.Printf("\nResults successfully exported to %s\n", exportFile)
@@ -226,7 +225,6 @@ func init() {
 	listClientAppsCmd.Flags().StringP("adminToken", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
 	//Filters
 	listClientAppsCmd.Flags().String("filter-contract", "all", "Filter results: all (default), nonempty (only client apps with contracts), or empty (only client apps with no contracts)")
-
 	// export flags
 	listClientAppsCmd.Flags().StringP("out", "o", "", "If provided, export the results to the specified CSV file")
 }

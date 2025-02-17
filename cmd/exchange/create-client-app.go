@@ -1,7 +1,6 @@
 package exchange
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/mulesoft-anypoint/anypoint-client-go/exchange_apps"
@@ -44,7 +43,7 @@ var createClientAppCmd = &cobra.Command{
 		adminToken, _ := cmd.Flags().GetString("adminToken")
 		// Validate required fields.
 		if name == "" {
-			fmt.Println("Error: Application name is required.")
+			PrintError("Error: Application name is required.")
 			return
 		}
 		// Retrieve the authenticated client.
@@ -53,20 +52,20 @@ var createClientAppCmd = &cobra.Command{
 		if adminToken != "" {
 			client, err = anypoint.GetClientFromContext(anypoint.WithSkipTokenExpiration())
 			if err != nil {
-				fmt.Printf("Error retrieving client: %v\n", err)
+				PrintError("Error retrieving client: %v\n", err)
 				return
 			}
 			client.SetAdminAccessToken(adminToken)
 		} else {
 			client, err = anypoint.GetClientFromContext()
 			if err != nil {
-				fmt.Printf("Error retrieving client: %v\n", err)
+				PrintError("Error retrieving client: %v\n", err)
 				return
 			}
 		}
 		//Read Org ID
 		if client.IsOrgEmpty() && orgID == "" {
-			fmt.Println("Please provide --org flag")
+			PrintError("Please provide --org flag\n")
 			return
 		}
 		if orgID == "" {
@@ -77,7 +76,7 @@ var createClientAppCmd = &cobra.Command{
 		//Create the Client App
 		app, err := client.PostExchangeClientApp(ctx, orgID, name, description, url, strings.Split(grantTypes, ","), strings.Split(redirectUri, ","))
 		if err != nil {
-			fmt.Printf("Error creating the client app %v\n", err)
+			PrintError("Error creating the client app %v\n", err)
 			return
 		}
 

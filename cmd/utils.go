@@ -40,6 +40,13 @@ func serverindex2cplane(index int) string {
 	}
 }
 
+// PrintError prints an error message in red and bold to standard error.
+func PrintError(format string, a ...interface{}) {
+	errPrinter := color.New(color.FgRed, color.Bold).SprintfFunc()
+	msg := fmt.Sprintf(format, a...)
+	fmt.Fprintln(os.Stderr, errPrinter(msg))
+}
+
 // PrintClientInfo prints non-sensitive client information in a colorful format.
 func PrintClientInfo(ctx context.Context, client *anypoint.Client) {
 	var bg *org.MasterBGDetail
