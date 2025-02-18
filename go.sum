@@ -131,6 +131,8 @@ github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyua
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mulesoft-anypoint/anypoint-client-go/authorization v0.3.0 h1:9CmX/n8KHR0DpK0WBYt4kO8youq2TYZ8r3XLqmRtJFY=
 github.com/mulesoft-anypoint/anypoint-client-go/authorization v0.3.0/go.mod h1:V5QUMbu/p3eKOCwjpkhEH4uYDEg3f0/u9H8PLz1R060=
+github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps v0.0.1 h1:nTNKbc+A1XhdwXmizOuC0os4980G2K/rVdpR4h3gevM=
+github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps v0.0.1/go.mod h1:+jnD6iM/tqP8wk9QzOKT5k/Wqgw2bdCSo+8oythYG6o=
 github.com/mulesoft-anypoint/anypoint-client-go/org v0.4.0 h1:TOaHNJbX/aFMhFB8Y12TnHO+XSVr/mWv9ASU0QsdGf8=
 github.com/mulesoft-anypoint/anypoint-client-go/org v0.4.0/go.mod h1:6QFWuAYmlAtDYglheyxntcMEDxZSUV0jGbVKuXOElW8=
 github.com/pelletier/go-toml/v2 v2.2.3 h1:YmeHyLY8mFWbdkNWwpr+qIL2bEqT0o95WSdkNHvL12M=

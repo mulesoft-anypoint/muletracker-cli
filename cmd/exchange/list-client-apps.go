@@ -8,18 +8,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mulesoft-anypoint/anypoint-client-go/exchange_apps"
+	"github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps"
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
 	"github.com/spf13/cobra"
 )
 
 type ClientAppResult struct {
-	ClientApp *exchange_apps.GetExchangeAppsResponseInner
-	Contracts []exchange_apps.GetExchangeAppContractsResponseInner
+	ClientApp *exchange_client_apps.ClientApp
+	Contracts []exchange_client_apps.ClientAppContract
 	Err       error
 }
 
-func ListExchClientAppContracts(ctx context.Context, client *anypoint.Client, orgID string, clientApp *exchange_apps.GetExchangeAppsResponseInner) ClientAppResult {
+func ListExchClientAppContracts(ctx context.Context, client *anypoint.Client, orgID string, clientApp *exchange_client_apps.ClientApp) ClientAppResult {
 	var result ClientAppResult
 	result.ClientApp = clientApp
 	contracts, err := client.GetExchangeClientAppContracts(ctx, orgID, clientApp.GetId())
@@ -33,7 +33,7 @@ func ListExchClientAppContracts(ctx context.Context, client *anypoint.Client, or
 }
 
 // monitorAppsConcurrently monitors a list of apps with concurrency and rate limiting.
-func ListExchClientAppsConcurrently(ctx context.Context, client *anypoint.Client, orgID string, clientApps []exchange_apps.GetExchangeAppsResponseInner) []ClientAppResult {
+func ListExchClientAppsConcurrently(ctx context.Context, client *anypoint.Client, orgID string, clientApps []exchange_client_apps.ClientApp) []ClientAppResult {
 	const concurrencyLimit = 5
 	sem := make(chan struct{}, concurrencyLimit)
 	var wg sync.WaitGroup
@@ -45,7 +45,7 @@ func ListExchClientAppsConcurrently(ctx context.Context, client *anypoint.Client
 
 	for _, clientApp := range clientApps {
 		wg.Add(1)
-		go func(app exchange_apps.GetExchangeAppsResponseInner) {
+		go func(app exchange_client_apps.ClientApp) {
 			defer wg.Done()
 			sem <- struct{}{}        // Acquire semaphore.
 			defer func() { <-sem }() // Release semaphore.
@@ -69,7 +69,7 @@ func ListExchClientAppsConcurrently(ctx context.Context, client *anypoint.Client
 }
 
 // Returns the count of contracts by status
-func CountContractsByStatus(contracts []exchange_apps.GetExchangeAppContractsResponseInner) map[string]int {
+func CountContractsByStatus(contracts []exchange_client_apps.ClientAppContract) map[string]int {
 	data := make(map[string]int)
 	for _, contract := range contracts {
 		if val, ok := data[contract.GetStatus()]; ok {

@@ -17,7 +17,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mulesoft-anypoint/anypoint-client-go/authorization v0.3.0 // indirect
-	github.com/mulesoft-anypoint/anypoint-client-go/exchange_apps v0.0.1 // indirect
+	github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps v0.0.1 // indirect
 	github.com/mulesoft-anypoint/anypoint-client-go/org v0.4.0 // indirect
 	github.com/mulesoft-anypoint/muletracker-cli/anypoint v0.0.1 // indirect
 	github.com/mulesoft-anypoint/muletracker-cli/cmd/exchange v0.0.1 // indirect
@@ -47,5 +47,3 @@ replace github.com/mulesoft-anypoint/muletracker-cli/cmd/exchange => ./cmd/excha
 replace github.com/mulesoft-anypoint/muletracker-cli/config => ./config
 
 replace github.com/mulesoft-anypoint/muletracker-cli/anypoint => ./anypoint
-
-replace github.com/mulesoft-anypoint/anypoint-client-go/exchange_apps v0.0.1 => /Users/souf/Workspaces/CAT/Anypoint-Devops-Collective/anypoint-automation-client-generator/dist/exchange_apps

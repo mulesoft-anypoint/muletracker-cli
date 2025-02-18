@@ -3,12 +3,12 @@ package exchange
 import (
 	"strings"
 
-	"github.com/mulesoft-anypoint/anypoint-client-go/exchange_apps"
+	"github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps"
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
 	"github.com/spf13/cobra"
 )
 
-func ExchangeClientApps2Map(apps []exchange_apps.PostExchangeAppsReponse) ([]map[string]interface{}, []string) {
+func ExchangeClientApps2Map(apps []exchange_client_apps.ClientApp) ([]map[string]interface{}, []string) {
 	data := make([]map[string]interface{}, 0)
 	for _, a := range apps {
 		data = append(data, map[string]interface{}{
@@ -22,7 +22,7 @@ func ExchangeClientApps2Map(apps []exchange_apps.PostExchangeAppsReponse) ([]map
 	return data, order
 }
 
-func PrintClientApps(apps []exchange_apps.PostExchangeAppsReponse) {
+func PrintClientApps(apps []exchange_client_apps.ClientApp) {
 	data, order := ExchangeClientApps2Map(apps)
 	PrintGenericTable(data, order)
 }
@@ -80,7 +80,7 @@ var createClientAppCmd = &cobra.Command{
 			return
 		}
 
-		PrintClientApps([]exchange_apps.PostExchangeAppsReponse{*app})
+		PrintClientApps([]exchange_client_apps.ClientApp{*app})
 	},
 }
 

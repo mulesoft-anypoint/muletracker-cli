@@ -3,10 +3,11 @@ module github.com/mulesoft-anypoint/muletracker-cli/cmd
 go 1.24.0
 
 require (
-	github.com/mulesoft-anypoint/anypoint-client-go/exchange_apps v0.0.1 // indirect
 	github.com/mulesoft-anypoint/muletracker-cli/anypoint v0.0.1
 	github.com/mulesoft-anypoint/muletracker-cli/cmd/exchange v0.0.1
 )
+
+require github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps v0.0.1 // indirect
 
 require (
 	github.com/fatih/color v1.18.0
@@ -45,7 +46,5 @@ require (
 replace github.com/mulesoft-anypoint/muletracker-cli/anypoint v0.0.1 => ../anypoint
 
 replace github.com/mulesoft-anypoint/muletracker-cli/config v0.0.1 => ../config
-
-replace github.com/mulesoft-anypoint/anypoint-client-go/exchange_apps v0.0.1 => /Users/souf/Workspaces/CAT/Anypoint-Devops-Collective/anypoint-automation-client-generator/dist/exchange_apps
 
 replace github.com/mulesoft-anypoint/muletracker-cli/cmd/exchange v0.0.1 => ./exchange

@@ -5,13 +5,13 @@ import (
 	"errors"
 	"io"
 
-	"github.com/mulesoft-anypoint/anypoint-client-go/exchange_apps"
+	"github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps"
 )
 
-func (c *Client) PostExchangeClientApp(ctx context.Context, orgID, name, description, url string, grantTypes, redirectUris []string) (*exchange_apps.PostExchangeAppsReponse, error) {
-	exchAppCtx := context.WithValue(context.WithValue(ctx, exchange_apps.ContextAccessToken, c.getEffectiveToken()), exchange_apps.ContextServerIndex, c.ServerIndex)
-	exchAppClient := exchange_apps.NewAPIClient(exchange_apps.NewConfiguration())
-	body := exchange_apps.NewPostExchangeAppsBodyWithDefaults()
+func (c *Client) PostExchangeClientApp(ctx context.Context, orgID, name, description, url string, grantTypes, redirectUris []string) (*exchange_client_apps.ClientApp, error) {
+	exchAppCtx := context.WithValue(context.WithValue(ctx, exchange_client_apps.ContextAccessToken, c.getEffectiveToken()), exchange_client_apps.ContextServerIndex, c.ServerIndex)
+	exchAppClient := exchange_client_apps.NewAPIClient(exchange_client_apps.NewConfiguration())
+	body := exchange_client_apps.NewPostExchangeAppsBodyWithDefaults()
 	body.SetName(name)
 	body.SetDescription(description)
 	body.SetGrantTypes(grantTypes)
@@ -36,12 +36,12 @@ func (c *Client) PostExchangeClientApp(ctx context.Context, orgID, name, descrip
 }
 
 // Get Exchange Client Apps
-func (c *Client) GetExchangeClientApps(ctx context.Context, orgID string, targetAdminSite bool) ([]exchange_apps.GetExchangeAppsResponseInner, error) {
-	exchAppCtx := context.WithValue(context.WithValue(ctx, exchange_apps.ContextAccessToken, c.getEffectiveToken()), exchange_apps.ContextServerIndex, c.ServerIndex)
-	exchAppClient := exchange_apps.NewAPIClient(exchange_apps.NewConfiguration())
+func (c *Client) GetExchangeClientApps(ctx context.Context, orgID string, targetAdminSite bool) ([]exchange_client_apps.ClientApp, error) {
+	exchAppCtx := context.WithValue(context.WithValue(ctx, exchange_client_apps.ContextAccessToken, c.getEffectiveToken()), exchange_client_apps.ContextServerIndex, c.ServerIndex)
+	exchAppClient := exchange_client_apps.NewAPIClient(exchange_client_apps.NewConfiguration())
 	limit := 250
 	page := 0
-	result := make([]exchange_apps.GetExchangeAppsResponseInner, 0)
+	result := make([]exchange_client_apps.ClientApp, 0)
 	stop := false
 	for ok := true; ok; ok = stop {
 		exchApps, httpr, err := exchAppClient.DefaultApi.GetExchangeClientApps(exchAppCtx, orgID).Limit(int32(limit)).Offset(int32(limit) * int32(page)).TargetAdminSite(targetAdminSite).Execute()
@@ -66,9 +66,9 @@ func (c *Client) GetExchangeClientApps(ctx context.Context, orgID string, target
 }
 
 // Get Exchange Client Application Contracts
-func (c *Client) GetExchangeClientAppContracts(ctx context.Context, orgID string, appID int32) ([]exchange_apps.GetExchangeAppContractsResponseInner, error) {
-	exchAppCtx := context.WithValue(context.WithValue(ctx, exchange_apps.ContextAccessToken, c.getEffectiveToken()), exchange_apps.ContextServerIndex, c.ServerIndex)
-	exchAppClient := exchange_apps.NewAPIClient(exchange_apps.NewConfiguration())
+func (c *Client) GetExchangeClientAppContracts(ctx context.Context, orgID string, appID int32) ([]exchange_client_apps.ClientAppContract, error) {
+	exchAppCtx := context.WithValue(context.WithValue(ctx, exchange_client_apps.ContextAccessToken, c.getEffectiveToken()), exchange_client_apps.ContextServerIndex, c.ServerIndex)
+	exchAppClient := exchange_client_apps.NewAPIClient(exchange_client_apps.NewConfiguration())
 	contracts, httpr, err := exchAppClient.DefaultApi.GetExchangeClientAppContracts(exchAppCtx, orgID, appID).Execute()
 	if err != nil {
 		var details string
@@ -88,8 +88,8 @@ func (c *Client) GetExchangeClientAppContracts(ctx context.Context, orgID string
 
 // Delete Exchange Client Application
 func (c *Client) DeleteExchangeClientApp(ctx context.Context, orgID string, appID int32) error {
-	exchAppCtx := context.WithValue(context.WithValue(ctx, exchange_apps.ContextAccessToken, c.getEffectiveToken()), exchange_apps.ContextServerIndex, c.ServerIndex)
-	exchAppClient := exchange_apps.NewAPIClient(exchange_apps.NewConfiguration())
+	exchAppCtx := context.WithValue(context.WithValue(ctx, exchange_client_apps.ContextAccessToken, c.getEffectiveToken()), exchange_client_apps.ContextServerIndex, c.ServerIndex)
+	exchAppClient := exchange_client_apps.NewAPIClient(exchange_client_apps.NewConfiguration())
 	httpr, err := exchAppClient.DefaultApi.DeleteExchangeClientApp(exchAppCtx, orgID, appID).Execute()
 	if err != nil {
 		var details string

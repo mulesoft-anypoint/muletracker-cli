@@ -4,6 +4,8 @@ go 1.24.0
 
 require github.com/mulesoft-anypoint/muletracker-cli/anypoint v0.0.1
 
+require github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps v0.0.1
+
 require (
 	github.com/fatih/color v1.18.0
 	github.com/mattn/go-colorable v0.1.14 // indirect
@@ -17,7 +19,6 @@ require (
 	github.com/magiconair/properties v1.8.9 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mulesoft-anypoint/anypoint-client-go/authorization v0.3.0 // indirect
-	github.com/mulesoft-anypoint/anypoint-client-go/exchange_apps v0.0.1
 	github.com/mulesoft-anypoint/anypoint-client-go/org v0.4.0
 	github.com/mulesoft-anypoint/muletracker-cli/config v0.0.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
@@ -42,7 +43,5 @@ require (
 replace github.com/mulesoft-anypoint/muletracker-cli/anypoint v0.0.1 => ../../anypoint
 
 replace github.com/mulesoft-anypoint/muletracker-cli/config v0.0.1 => ../../config
-
-replace github.com/mulesoft-anypoint/anypoint-client-go/exchange_apps v0.0.1 => /Users/souf/Workspaces/CAT/Anypoint-Devops-Collective/anypoint-automation-client-generator/dist/exchange_apps
 
 replace github.com/mulesoft-anypoint/muletracker-cli/cmd v0.0.1 => ../../cmd
