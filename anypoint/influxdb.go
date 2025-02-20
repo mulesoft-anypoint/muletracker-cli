@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 // A path template for the monitoring API. The "%s" will be replaced with the InfluxDB ID.
@@ -122,6 +123,7 @@ func (c *Client) GetInfluxDBID(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	bootDataURL := host + "/monitoring/api/visualizer/api/bootdata"
+	token := c.getEffectiveToken()
 
 	// Create the GET request.
 	req, err := http.NewRequestWithContext(ctx, "GET", bootDataURL, nil)
@@ -130,7 +132,7 @@ func (c *Client) GetInfluxDBID(ctx context.Context) (int, error) {
 	}
 
 	// Set the Authorization header.
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	// Execute the request.
 	resp, err := http.DefaultClient.Do(req)
@@ -162,4 +164,106 @@ func (c *Client) GetInfluxDBID(ctx context.Context) (int, error) {
 	c.InfluxDbId = bootData.Settings.Datasources.Influxdb.ID
 	// Return the influxdb id.
 	return c.InfluxDbId, nil
+}
+
+// GetLastCalledTime fetches the last time the given app was called.
+// It uses a query that calculates the 75th percentile of the avg_request_count
+// over the specified time window. It returns the timestamp of the latest data point.
+// The timeWindow parameter is a string (e.g. "15m", "24h", "3d") to define the lookback period.
+func (c *Client) GetLastCalledTime(ctx context.Context, orgID, envID string, app App, timeWindow string) (time.Time, error) {
+	templateCH1 := `SELECT percentile("avg_request_count", 75) FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`
+	templateRTF := `SELECT percentile("avg_request_count", 75) FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "cluster_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`
+	var query string
+
+	if FilterCH1(app) {
+		query = fmt.Sprintf(
+			templateCH1,
+			orgID, envID, app.Details.Domain, timeWindow,
+		)
+	} else if FilterRTF(app) {
+		query = fmt.Sprintf(
+			templateRTF,
+			orgID, envID, app.Target.ID, app.Artifact.Name, timeWindow,
+		)
+	} else {
+		fmt.Printf("Unsupported app target: %v\n", app)
+		return time.Time{}, fmt.Errorf("unsupported app type: %s", app.Target.Type)
+	}
+
+	params := QueryParams{
+		OrgID:      orgID,
+		EnvID:      envID,
+		AppID:      app.ID,
+		Query:      query,
+		InfluxDBId: c.InfluxDbId,
+	}
+
+	resp, err := c.queryInfluxDB(ctx, params)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error querying last called time: %w", err)
+	}
+
+	// Look for the last timestamp in the returned series.
+	if len(resp.Results) > 0 && len(resp.Results[0].Series) > 0 {
+		series := resp.Results[0].Series[0]
+		if len(series.Values) > 0 {
+			// The first column is "time" (epoch in ms)
+			// Use the last value in the list.
+			lastVal := series.Values[len(series.Values)-1][0]
+			if ts, ok := lastVal.(float64); ok {
+				return time.Unix(0, int64(ts)*int64(time.Millisecond)), nil
+			}
+		}
+	}
+
+	return time.Time{}, nil
+}
+
+// GetRequestCount fetches the total number of requests for the given app
+// over the specified time window.
+// The timeWindow parameter is a string (e.g. "24h", "3d") to define the lookback period.
+func (c *Client) GetRequestCount(ctx context.Context, orgID, envID string, app App, timeWindow string) (int, error) {
+	templateCH1 := `SELECT sum("avg_request_count") FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`
+	templateRTF := `SELECT sum("avg_request_count") FROM "app_inbound_metric" WHERE "org_id" = '%s' AND "env_id" = '%s' AND "cluster_id" = '%s' AND "app_id" = '%s' AND time >= now() - %s GROUP BY time(1m), "app_id" fill(none) tz('Europe/Paris')`
+	var query string
+
+	if FilterCH1(app) {
+		query = fmt.Sprintf(
+			templateCH1,
+			orgID, envID, app.Details.Domain, timeWindow,
+		)
+	} else if FilterRTF(app) {
+		query = fmt.Sprintf(
+			templateRTF,
+			orgID, envID, app.Target.ID, app.Artifact.Name, timeWindow,
+		)
+	} else {
+		return 0, fmt.Errorf("unsupported app type: %s", app.Target.Type)
+	}
+
+	params := QueryParams{
+		OrgID:      orgID,
+		EnvID:      envID,
+		AppID:      app.ID,
+		Query:      query,
+		InfluxDBId: c.InfluxDbId,
+	}
+
+	resp, err := c.queryInfluxDB(ctx, params)
+	if err != nil {
+		return 0, fmt.Errorf("error querying request count: %w", err)
+	}
+
+	total := 0
+	if len(resp.Results) > 0 && len(resp.Results[0].Series) > 0 {
+		series := resp.Results[0].Series[0]
+		for _, entry := range series.Values {
+			if countVal, ok := entry[1].(float64); ok {
+				total += int(countVal)
+			}
+		}
+		return total, nil
+	}
+
+	return 0, nil
 }
