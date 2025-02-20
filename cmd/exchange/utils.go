@@ -1,4 +1,4 @@
-package cmd
+package exchange
 
 import (
 	"context"
@@ -14,18 +14,6 @@ import (
 	"github.com/mulesoft-anypoint/anypoint-client-go/org"
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
 )
-
-// cplane2serverindex converts control plane name to server index.
-func cplane2serverindex(cplane string) int {
-	if cplane == "eu" {
-		return 1
-	} else if cplane == "us" {
-		return 0
-	} else if cplane == "gov" {
-		return 2
-	}
-	return -1 // Return -1 for invalid control plane
-}
 
 func serverindex2cplane(index int) string {
 	switch index {
