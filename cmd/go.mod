@@ -5,6 +5,7 @@ go 1.24.0
 require (
 	github.com/mulesoft-anypoint/muletracker-cli/anypoint v0.0.1
 	github.com/mulesoft-anypoint/muletracker-cli/cmd/exchange v0.0.1
+	github.com/mulesoft-anypoint/muletracker-cli/cmd/runtime v0.0.0
 )
 
 require github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps v0.0.1 // indirect
@@ -38,13 +39,15 @@ require (
 	github.com/mulesoft-anypoint/anypoint-client-go/authorization v0.3.0 // indirect
 	github.com/mulesoft-anypoint/anypoint-client-go/org v0.4.0
 	github.com/mulesoft-anypoint/muletracker-cli/config v0.0.1 // indirect
-	github.com/spf13/cobra v1.8.1
+	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6 // indirect
 	golang.org/x/oauth2 v0.25.0 // indirect
 )
 
-replace github.com/mulesoft-anypoint/muletracker-cli/anypoint v0.0.1 => ../anypoint
+replace github.com/mulesoft-anypoint/muletracker-cli/anypoint => ../anypoint
 
-replace github.com/mulesoft-anypoint/muletracker-cli/config v0.0.1 => ../config
+replace github.com/mulesoft-anypoint/muletracker-cli/config => ../config
 
-replace github.com/mulesoft-anypoint/muletracker-cli/cmd/exchange v0.0.1 => ./exchange
+replace github.com/mulesoft-anypoint/muletracker-cli/cmd/exchange => ./exchange
+
+replace github.com/mulesoft-anypoint/muletracker-cli/cmd/runtime => ./runtime

@@ -7,6 +7,7 @@ type App struct {
 		Type    string `json:"type"`
 		Subtype string `json:"subtype,omitempty"`
 		ID      string `json:"id,omitempty"`
+		Name    string `json:"name,omitempty"`
 	} `json:"target"`
 	Artifact struct {
 		LastUpdateTime int64  `json:"lastUpdateTime"`

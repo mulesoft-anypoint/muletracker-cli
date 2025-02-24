@@ -158,7 +158,7 @@ var listClientAppsCmd = &cobra.Command{
 		// Retrieve flags.
 		filterContract, _ := cmd.Flags().GetString("filter-contract")
 		orgID, _ := cmd.Flags().GetString("org")
-		adminToken, _ := cmd.Flags().GetString("adminToken")
+		adminToken, _ := cmd.Flags().GetString("admin-token")
 		exportFile, _ := cmd.Flags().GetString("out")
 		// Retrieve the authenticated client.
 		var client *anypoint.Client
@@ -222,7 +222,7 @@ var listClientAppsCmd = &cobra.Command{
 
 func init() {
 	listClientAppsCmd.Flags().String("org", "", "The Business Group ID. This should be the root org id")
-	listClientAppsCmd.Flags().StringP("adminToken", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
+	listClientAppsCmd.Flags().StringP("admin-token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
 	//Filters
 	listClientAppsCmd.Flags().String("filter-contract", "all", "Filter results: all (default), nonempty (only client apps with contracts), or empty (only client apps with no contracts)")
 	// export flags

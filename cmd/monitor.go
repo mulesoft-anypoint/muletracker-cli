@@ -196,9 +196,13 @@ Filters:
 		//Load org and env if necessary
 		if orgID == "" {
 			orgID = client.Org
+		} else {
+			client.SetOrg(orgID)
 		}
 		if envID == "" {
 			envID = client.Env
+		} else {
+			client.SetEnv(envID)
 		}
 
 		// Display the client info in a colorful way.

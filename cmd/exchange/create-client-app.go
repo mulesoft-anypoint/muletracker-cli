@@ -40,7 +40,7 @@ var createClientAppCmd = &cobra.Command{
 		redirectUri, _ := cmd.Flags().GetString("redirect-uris")
 		url, _ := cmd.Flags().GetString("url")
 		grantTypes, _ := cmd.Flags().GetString("grant-types")
-		adminToken, _ := cmd.Flags().GetString("adminToken")
+		adminToken, _ := cmd.Flags().GetString("admin-token")
 		// Validate required fields.
 		if name == "" {
 			PrintError("Error: Application name is required.")
@@ -92,7 +92,7 @@ func init() {
 	createClientAppCmd.Flags().String("redirect-uris", "", "OAuth 2.0 redirect URIs separated by comma (optional).")
 	createClientAppCmd.Flags().String("url", "", "The application URL (optional).")
 	createClientAppCmd.Flags().String("grant-types", "", "The application grant types separated by comma (optional).")
-	createClientAppCmd.Flags().StringP("adminToken", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
+	createClientAppCmd.Flags().StringP("admin-token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
 	//Required name
 	createClientAppCmd.MarkFlagRequired("name")
 }
