@@ -2,15 +2,12 @@ package anypoint
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"time"
 
 	"github.com/mulesoft-anypoint/anypoint-client-go/authorization"
-	"github.com/mulesoft-anypoint/anypoint-client-go/org"
 	"github.com/mulesoft-anypoint/muletracker-cli/config"
 	"github.com/spf13/viper"
 )
@@ -237,74 +234,4 @@ func (c *Client) getEffectiveToken() string {
 		return c.AdminAccessToken
 	}
 	return c.AccessToken
-}
-
-// GetBusinessGroups retrieves the business groups.
-func (c *Client) GetBusinessGroup(ctx context.Context, orgId string) (*org.MasterBGDetail, error) {
-	orgCtx := context.WithValue(context.WithValue(ctx, org.ContextAccessToken, c.getEffectiveToken()), org.ContextServerIndex, c.ServerIndex)
-	orgClient := org.NewAPIClient(org.NewConfiguration())
-	orgResult, httpr, err := orgClient.DefaultApi.OrganizationsOrgIdGet(orgCtx, orgId).Execute()
-	if err != nil {
-		var details string
-		if httpr != nil && httpr.StatusCode >= 400 {
-			defer httpr.Body.Close()
-			b, _ := io.ReadAll(httpr.Body)
-			details = string(b)
-		} else {
-			details = err.Error()
-		}
-		return nil, errors.New(details)
-	}
-	defer httpr.Body.Close()
-	return &orgResult, nil
-}
-
-// GetEnvironments retrieves environments for a given business group ID.
-func (c *Client) GetEnvironments(ctx context.Context, bgId string) ([]org.Environment, error) {
-	org, err := c.GetBusinessGroup(ctx, bgId)
-	if err != nil {
-		return nil, err
-	}
-	return org.GetEnvironments(), nil
-}
-
-// GetApps retrieves all applications for a given org and env.
-func (c *Client) GetApps(ctx context.Context, orgID, envID string, filters ...AppFilter) ([]App, error) {
-	host, err := c.getServerHost()
-	if err != nil {
-		return nil, err
-	}
-	token := c.getEffectiveToken()
-	url := host + "/armui/api/v1/applications"
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error creating request: %w", err)
-	}
-
-	// Set required headers.
-	req.Header.Set("x-anypnt-org-id", orgID)
-	req.Header.Set("x-anypnt-env-id", envID)
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error executing request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("non-OK status %d: %s", resp.StatusCode, string(body))
-	}
-
-	var appsResp AppsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&appsResp); err != nil {
-		return nil, fmt.Errorf("error decoding response: %w", err)
-	}
-
-	apps := appsResp.Data
-	if len(filters) > 0 {
-		apps = FilterApps(apps, filters...)
-	}
-	return apps, nil
 }

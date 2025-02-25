@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/mulesoft-anypoint/muletracker-cli/cmd/exchange"
+	"github.com/mulesoft-anypoint/muletracker-cli/cmd/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -33,4 +34,5 @@ func init() {
 	// Here you can add persistent flags and configuration settings.
 	rootCmd.PersistentFlags().StringP("config", "f", "", "config file (default is $HOME/.muletracker.yaml)")
 	rootCmd.AddCommand(exchange.ExchangeCmd)
+	rootCmd.AddCommand(runtime.RuntimeCmd)
 }
