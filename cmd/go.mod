@@ -4,14 +4,15 @@ go 1.24.0
 
 require (
 	github.com/mulesoft-anypoint/muletracker-cli/anypoint v0.0.1
-	github.com/mulesoft-anypoint/muletracker-cli/cmd/exchange v0.0.1
+	github.com/mulesoft-anypoint/muletracker-cli/cmd/exchange v0.0.0
 	github.com/mulesoft-anypoint/muletracker-cli/cmd/runtime v0.0.0
+	github.com/mulesoft-anypoint/muletracker-cli/utils v0.0.0
 )
 
 require github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps v0.0.1 // indirect
 
 require (
-	github.com/fatih/color v1.18.0
+	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.9 // indirect
@@ -37,7 +38,7 @@ require (
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mulesoft-anypoint/anypoint-client-go/authorization v0.3.0 // indirect
-	github.com/mulesoft-anypoint/anypoint-client-go/org v0.4.0
+	github.com/mulesoft-anypoint/anypoint-client-go/org v0.4.0 // indirect
 	github.com/mulesoft-anypoint/muletracker-cli/config v0.0.1 // indirect
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6 // indirect
@@ -51,3 +52,5 @@ replace github.com/mulesoft-anypoint/muletracker-cli/config => ../config
 replace github.com/mulesoft-anypoint/muletracker-cli/cmd/exchange => ./exchange
 
 replace github.com/mulesoft-anypoint/muletracker-cli/cmd/runtime => ./runtime
+
+replace github.com/mulesoft-anypoint/muletracker-cli/utils => ../utils

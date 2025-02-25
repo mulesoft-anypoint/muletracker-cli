@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
+	"github.com/mulesoft-anypoint/muletracker-cli/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -20,24 +21,24 @@ var environmentsCmd = &cobra.Command{
 		ctx := cmd.Context()
 		businessGroupID, _ := cmd.Flags().GetString("org")
 		if businessGroupID == "" {
-			PrintError("Please provide a business group ID using the --org flag.")
+			utils.PrintError("Please provide a business group ID using the --org flag.")
 			return
 		}
 
 		// Retrieve the authenticated client.
 		client, err := anypoint.GetClientFromContext()
 		if err != nil {
-			PrintError("Error retrieving client: %v\n", err)
+			utils.PrintError("Error retrieving client: %v\n", err)
 			return
 		}
 
 		// Display the client info in a colorful way.
-		PrintClientInfo(ctx, client)
+		utils.PrintClientInfo(ctx, client)
 
 		// Retrieve environments for the provided business group.
 		environments, err := client.GetEnvironments(ctx, businessGroupID)
 		if err != nil {
-			PrintError("Error retrieving environments: %v\n", err)
+			utils.PrintError("Error retrieving environments: %v\n", err)
 			return
 		}
 
@@ -57,13 +58,13 @@ var environmentsCmd = &cobra.Command{
 		fmt.Print("Select environment number to use: ")
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			PrintError("Error reading input: %v\n", err)
+			utils.PrintError("Error reading input: %v\n", err)
 			return
 		}
 		input = strings.TrimSpace(input)
 		selection, err := strconv.Atoi(input)
 		if err != nil || selection < 1 || selection > len(environments) {
-			PrintError("Error: Invalid selection.")
+			utils.PrintError("Error: Invalid selection.")
 			return
 		}
 

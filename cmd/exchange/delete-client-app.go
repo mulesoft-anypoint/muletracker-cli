@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
+	"github.com/mulesoft-anypoint/muletracker-cli/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +27,7 @@ func deleteClientAppsConcurrently(ctx context.Context, client *anypoint.Client, 
 			defer func() { <-sem }() // Release semaphore.
 			<-rateLimiter.C          // Wait for rate limiter tick.
 			if err := client.DeleteExchangeClientApp(ctx, orgID, res.ClientApp.GetId()); err != nil {
-				PrintError("Error while deleting client app %s: %v\v", res.ClientApp.GetName(), err)
+				utils.PrintError("Error while deleting client app %s: %v\v", res.ClientApp.GetName(), err)
 			} else {
 				fmt.Printf("Deleted client app %s.\n", res.ClientApp.GetName())
 			}
@@ -39,7 +40,7 @@ func deleteClientAppsWithEmptyContracts(ctx context.Context, orgID string, clien
 	//Get All exchange client apps
 	list, err := client.GetExchangeClientApps(ctx, orgID, true)
 	if err != nil {
-		PrintError("Error retrieving Exchange Client Apps %v/n", err)
+		utils.PrintError("Error retrieving Exchange Client Apps %v/n", err)
 		return
 	}
 	//Get All exchange client apps contracts and filter them
@@ -69,7 +70,7 @@ var deleteClientAppCmd = &cobra.Command{
 		filterByEmptyContract, _ := cmd.Flags().GetBool("with-empty-contract")
 		// Validate params
 		if appIDStr == "" && !filterByEmptyContract {
-			PrintError("Error: Application ID or filter is required to delete Exchange Client Applications.")
+			utils.PrintError("Error: Application ID or filter is required to delete Exchange Client Applications.")
 			return
 		}
 		// Retrieve the authenticated client.
@@ -77,20 +78,20 @@ var deleteClientAppCmd = &cobra.Command{
 		if adminToken != "" {
 			client, err = anypoint.GetClientFromContext(anypoint.WithSkipTokenExpiration())
 			if err != nil {
-				PrintError("Error retrieving client: %v\n", err)
+				utils.PrintError("Error retrieving client: %v\n", err)
 				return
 			}
 			client.SetAdminAccessToken(adminToken)
 		} else {
 			client, err = anypoint.GetClientFromContext()
 			if err != nil {
-				PrintError("Error retrieving client: %v\n", err)
+				utils.PrintError("Error retrieving client: %v\n", err)
 				return
 			}
 		}
 		//Read Org ID
 		if client.IsOrgEmpty() && orgID == "" {
-			PrintError("Please provide --org flag")
+			utils.PrintError("Please provide --org flag")
 			return
 		}
 		if orgID == "" {
@@ -99,17 +100,17 @@ var deleteClientAppCmd = &cobra.Command{
 			client.SetOrg(orgID)
 		}
 		// Display the client info in a colorful way.
-		PrintClientInfo(ctx, client)
+		utils.PrintClientInfo(ctx, client)
 		if filterByEmptyContract {
 			deleteClientAppsWithEmptyContracts(ctx, orgID, client)
 		} else {
 			appID, err := strconv.Atoi(appIDStr)
 			if err != nil {
-				PrintError("Error: Application ID is unvalid.")
+				utils.PrintError("Error: Application ID is unvalid.")
 				return
 			}
 			if err := client.DeleteExchangeClientApp(ctx, orgID, int32(appID)); err != nil {
-				PrintError("Error deleting the application client %v\n", err)
+				utils.PrintError("Error deleting the application client %v\n", err)
 				return
 			}
 			fmt.Printf("Deleted Exchange application with ID: %s\n", appIDStr)

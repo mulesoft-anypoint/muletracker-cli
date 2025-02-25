@@ -1,4 +1,4 @@
-package exchange
+package utils
 
 import (
 	"context"
@@ -15,7 +15,19 @@ import (
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
 )
 
-func serverindex2cplane(index int) string {
+// cplane2serverindex converts control plane name to server index.
+func Cplane2serverindex(cplane string) int {
+	if cplane == "eu" {
+		return 1
+	} else if cplane == "us" {
+		return 0
+	} else if cplane == "gov" {
+		return 2
+	}
+	return -1 // Return -1 for invalid control plane
+}
+
+func Serverindex2cplane(index int) string {
 	switch index {
 	case 0:
 		return "us"
@@ -29,7 +41,7 @@ func serverindex2cplane(index int) string {
 }
 
 // PrintError prints an error message in red and bold to standard error.
-func PrintError(format string, a ...interface{}) {
+func PrintError(format string, a ...any) {
 	errPrinter := color.New(color.FgRed, color.Bold).SprintfFunc()
 	msg := fmt.Sprintf(format, a...)
 	fmt.Fprintln(os.Stderr, errPrinter(msg))
@@ -55,8 +67,8 @@ func PrintClientInfo(ctx context.Context, client *anypoint.Client) {
 		}
 	}
 
-	data := map[string]interface{}{
-		"* Control Plane":     strings.ToUpper(serverindex2cplane(client.ServerIndex)),
+	data := map[string]any{
+		"* Control Plane":     strings.ToUpper(Serverindex2cplane(client.ServerIndex)),
 		"* Business Group Id": bg.GetName(),
 		"* Environment Id":    env,
 		"* Connected App":     client.ClientId,
@@ -68,7 +80,7 @@ func PrintClientInfo(ctx context.Context, client *anypoint.Client) {
 }
 
 // PrintSimpleResults prints a header and key/value pairs in a simple, aligned style.
-func PrintSimpleResults(header string, data map[string]interface{}) {
+func PrintSimpleResults(header string, data map[string]any) {
 	// Define color functions.
 	headerColor := color.New(color.FgGreen, color.Bold).SprintFunc()
 	keyColor := color.New(color.FgYellow).SprintFunc()
@@ -116,11 +128,11 @@ func PrintSimpleResults(header string, data map[string]interface{}) {
 	fmt.Println(divider)
 }
 
-// PrintGenericTable prints a table from a slice of map[string]interface{}.
+// PrintGenericTable prints a table from a slice of map[string]any.
 // Each map represents a row and keys represent columns.
 // An optional headerOrder slice can be provided to control column order.
 // If headerOrder is empty, the union of keys is computed and sorted alphabetically.
-func PrintGenericTable(data []map[string]interface{}, headerOrder []string) {
+func PrintGenericTable(data []map[string]any, headerOrder []string) {
 	if len(data) == 0 {
 		fmt.Println("No data to display.")
 		return
@@ -169,10 +181,10 @@ func PrintGenericTable(data []map[string]interface{}, headerOrder []string) {
 	w.Flush()
 }
 
-// ExportGenericCSV writes a slice of map[string]interface{} to a CSV file.
+// ExportGenericCSV writes a slice of map[string]any to a CSV file.
 // The CSV file will contain a header row (either provided via headerOrder or computed)
 // and one row per data map.
-func ExportGenericCSV(fileName string, data []map[string]interface{}, headerOrder []string) error {
+func ExportGenericCSV(fileName string, data []map[string]any, headerOrder []string) error {
 	// Open the file for writing (create or truncate)
 	file, err := os.Create(fileName)
 	if err != nil {

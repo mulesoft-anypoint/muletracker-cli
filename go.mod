@@ -22,6 +22,7 @@ require (
 	github.com/mulesoft-anypoint/muletracker-cli/anypoint v0.0.1 // indirect
 	github.com/mulesoft-anypoint/muletracker-cli/cmd/exchange v0.0.1 // indirect
 	github.com/mulesoft-anypoint/muletracker-cli/cmd/runtime v0.0.0 // indirect
+	github.com/mulesoft-anypoint/muletracker-cli/utils v0.0.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
@@ -50,3 +51,5 @@ replace github.com/mulesoft-anypoint/muletracker-cli/config => ./config
 replace github.com/mulesoft-anypoint/muletracker-cli/anypoint => ./anypoint
 
 replace github.com/mulesoft-anypoint/muletracker-cli/cmd/runtime => ./cmd/runtime
+
+replace github.com/mulesoft-anypoint/muletracker-cli/utils => ./utils

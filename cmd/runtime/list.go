@@ -4,21 +4,22 @@ import (
 	"fmt"
 
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
+	"github.com/mulesoft-anypoint/muletracker-cli/utils"
 	"github.com/spf13/cobra"
 )
 
-func Apps2Map(results []anypoint.App) ([]map[string]interface{}, []string) {
-	data := make([]map[string]interface{}, 0)
+func Apps2Map(results []anypoint.App) ([]map[string]any, []string) {
+	data := make([]map[string]any, 0)
 	for _, r := range results {
 		if anypoint.FilterRTF(r) {
-			data = append(data, map[string]interface{}{
+			data = append(data, map[string]any{
 				"App Name":     r.Artifact.Name,
 				"App Status":   r.Application.Status,
 				"Mule Version": r.MuleVersion.Version,
 				"Target":       "RTF",
 			})
 		} else if anypoint.FilterCH1(r) {
-			data = append(data, map[string]interface{}{
+			data = append(data, map[string]any{
 				"App Name":     r.Artifact.Name,
 				"App Status":   r.LastReportedStatus,
 				"Mule Version": r.MuleVersion.Version,
@@ -33,14 +34,14 @@ func Apps2Map(results []anypoint.App) ([]map[string]interface{}, []string) {
 
 // printAppsSummaryTable prints a condensed table of app monitoring results
 // using tabwriter for alignment.
-func printAppsSummaryTable(results []anypoint.App) {
+func printListAppsTable(results []anypoint.App) {
 	data, order := Apps2Map(results)
-	PrintGenericTable(data, order)
+	utils.PrintGenericTable(data, order)
 }
 
 func ExportAppsToCSV(fileName string, results []anypoint.App) error {
 	data, order := Apps2Map(results)
-	return ExportGenericCSV(fileName, data, order)
+	return utils.ExportGenericCSV(fileName, data, order)
 }
 
 var listAppsCmd = &cobra.Command{
@@ -60,20 +61,20 @@ var listAppsCmd = &cobra.Command{
 		if adminToken != "" {
 			client, err = anypoint.GetClientFromContext(anypoint.WithSkipTokenExpiration())
 			if err != nil {
-				PrintError("Error retrieving client: %v\n", err)
+				utils.PrintError("Error retrieving client: %v\n", err)
 				return
 			}
 			client.SetAdminAccessToken(adminToken)
 		} else {
 			client, err = anypoint.GetClientFromContext()
 			if err != nil {
-				PrintError("Error retrieving client: %v\n", err)
+				utils.PrintError("Error retrieving client: %v\n", err)
 				return
 			}
 		}
 		// Check that the required flags are provided.
 		if (client.IsOrgEmpty() && orgID == "") || (client.IsEnvEmpty() && envID == "") {
-			PrintError("Please provide --org, --env flags")
+			utils.PrintError("Please provide --org, --env flags")
 			return
 		}
 
@@ -91,22 +92,22 @@ var listAppsCmd = &cobra.Command{
 		//Get All exchange client apps
 		apps, err := client.GetApps(ctx, orgID, envID, []anypoint.AppFilter{}...)
 		if err != nil {
-			PrintError("Error retrieving apps: %v", err)
+			utils.PrintError("Error retrieving apps: %v", err)
 		}
 		// Display the client info in a colorful way.
-		PrintClientInfo(ctx, client)
+		utils.PrintClientInfo(ctx, client)
 
 		// If export flag is provided, export results to CSV.
 		if exportFile != "" {
 			err := ExportAppsToCSV(exportFile, apps)
 			if err != nil {
-				PrintError("Error exporting results to CSV: %v\n", err)
+				utils.PrintError("Error exporting results to CSV: %v\n", err)
 				return
 			}
 			fmt.Printf("\nResults successfully exported to %s\n", exportFile)
 		} else {
 			// Otherwise, print a summary table.
-			printAppsSummaryTable(apps)
+			printListAppsTable(apps)
 		}
 	},
 }
