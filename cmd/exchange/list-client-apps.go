@@ -159,39 +159,24 @@ var listClientAppsCmd = &cobra.Command{
 		// Retrieve flags.
 		filterContract, _ := cmd.Flags().GetString("filter-contract")
 		orgID, _ := cmd.Flags().GetString("org")
-		adminToken, _ := cmd.Flags().GetString("admin-token")
+		adminToken, _ := cmd.Flags().GetString("token")
 		exportFile, _ := cmd.Flags().GetString("out")
 		// Retrieve the authenticated client.
-		var client *anypoint.Client
-		var err error
-		if adminToken != "" {
-			client, err = anypoint.GetClientFromContext(anypoint.WithSkipTokenExpiration())
-			if err != nil {
-				utils.PrintError("Error retrieving client: %v\n", err)
-				return
-			}
-			client.SetAdminAccessToken(adminToken)
-		} else {
-			client, err = anypoint.GetClientFromContext()
-			if err != nil {
-				utils.PrintError("Error retrieving client: %v\n", err)
-				return
-			}
-		}
-		//Read Org ID
-		if client.IsOrgEmpty() && orgID == "" {
-			utils.PrintError("Please provide --org flag")
+		client, err := anypoint.GetInitializedClient(adminToken)
+		if err != nil {
+			utils.PrintError("Error retrieving client %v\n", err)
 			return
 		}
-		if orgID == "" {
-			orgID = client.Org
-		} else {
-			client.SetOrg(orgID)
+		//Read Org ID
+		orgID, err = utils.ValidateOrg(client, orgID)
+		if err != nil {
+			utils.PrintError("Validation error: %v\n", err)
+			return
 		}
 		//Get All exchange client apps
 		list, err := client.GetExchangeClientApps(ctx, orgID, true)
 		if err != nil {
-			utils.PrintError("Error retrieving Exchange Client Apps %v/n", err)
+			utils.PrintError("Error retrieving Exchange Client Apps %v\n", err)
 			return
 		}
 		// Display the client info in a colorful way.
@@ -223,7 +208,7 @@ var listClientAppsCmd = &cobra.Command{
 
 func init() {
 	listClientAppsCmd.Flags().String("org", "", "The Business Group ID. This should be the root org id")
-	listClientAppsCmd.Flags().StringP("admin-token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
+	listClientAppsCmd.Flags().StringP("token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
 	//Filters
 	listClientAppsCmd.Flags().String("filter-contract", "all", "Filter results: all (default), nonempty (only client apps with contracts), or empty (only client apps with no contracts)")
 	// export flags

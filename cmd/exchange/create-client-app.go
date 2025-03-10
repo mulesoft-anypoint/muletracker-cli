@@ -41,38 +41,23 @@ var createClientAppCmd = &cobra.Command{
 		redirectUri, _ := cmd.Flags().GetString("redirect-uris")
 		url, _ := cmd.Flags().GetString("url")
 		grantTypes, _ := cmd.Flags().GetString("grant-types")
-		adminToken, _ := cmd.Flags().GetString("admin-token")
+		adminToken, _ := cmd.Flags().GetString("token")
 		// Validate required fields.
 		if name == "" {
 			utils.PrintError("Error: Application name is required.")
 			return
 		}
 		// Retrieve the authenticated client.
-		var client *anypoint.Client
-		var err error
-		if adminToken != "" {
-			client, err = anypoint.GetClientFromContext(anypoint.WithSkipTokenExpiration())
-			if err != nil {
-				utils.PrintError("Error retrieving client: %v\n", err)
-				return
-			}
-			client.SetAdminAccessToken(adminToken)
-		} else {
-			client, err = anypoint.GetClientFromContext()
-			if err != nil {
-				utils.PrintError("Error retrieving client: %v\n", err)
-				return
-			}
-		}
-		//Read Org ID
-		if client.IsOrgEmpty() && orgID == "" {
-			utils.PrintError("Please provide --org flag\n")
+		client, err := anypoint.GetInitializedClient(adminToken)
+		if err != nil {
+			utils.PrintError("Error retrieving client %v\n", err)
 			return
 		}
-		if orgID == "" {
-			orgID = client.Org
-		} else {
-			client.SetOrg(orgID)
+		//Read Org ID
+		orgID, err = utils.ValidateOrg(client, orgID)
+		if err != nil {
+			utils.PrintError("Validation error: %v", err)
+			return
 		}
 		//Create the Client App
 		app, err := client.PostExchangeClientApp(ctx, orgID, name, description, url, strings.Split(grantTypes, ","), strings.Split(redirectUri, ","))
@@ -93,7 +78,7 @@ func init() {
 	createClientAppCmd.Flags().String("redirect-uris", "", "OAuth 2.0 redirect URIs separated by comma (optional).")
 	createClientAppCmd.Flags().String("url", "", "The application URL (optional).")
 	createClientAppCmd.Flags().String("grant-types", "", "The application grant types separated by comma (optional).")
-	createClientAppCmd.Flags().StringP("admin-token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
+	createClientAppCmd.Flags().StringP("token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
 	//Required name
 	createClientAppCmd.MarkFlagRequired("name")
 }

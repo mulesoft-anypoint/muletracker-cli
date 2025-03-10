@@ -175,35 +175,24 @@ Filters:
 		orgID, _ := cmd.Flags().GetString("org")
 		envID, _ := cmd.Flags().GetString("env")
 		appID, _ := cmd.Flags().GetString("app")
+		adminToken, _ := cmd.Flags().GetString("token")
 		lcWindow, _ := cmd.Flags().GetString("last-called-window")
 		rcWindow, _ := cmd.Flags().GetString("request-count-window")
 		dataFilter, _ := cmd.Flags().GetString("filter")
 		appType, _ := cmd.Flags().GetString("app-type")
 		exportFile, _ := cmd.Flags().GetString("out")
 
-		// Retrieve the previously connected client from context.
-		client, err := anypoint.GetClientFromContext()
+		// Retrieve the authenticated client.
+		client, err := anypoint.GetInitializedClient(adminToken)
 		if err != nil {
 			utils.PrintError("Error retrieving client %v\n", err)
 			return
 		}
-
-		// Check that the required flags are provided.
-		if (client.IsOrgEmpty() && orgID == "") || (client.IsEnvEmpty() && envID == "") {
-			utils.PrintError("Please provide --org, --env flags")
+		// Validate organization and environment.
+		orgID, envID, err = utils.ValidateOrgEnv(client, orgID, envID)
+		if err != nil {
+			utils.PrintError("Validation error: %v", err)
 			return
-		}
-
-		//Load org and env if necessary
-		if orgID == "" {
-			orgID = client.Org
-		} else {
-			client.SetOrg(orgID)
-		}
-		if envID == "" {
-			envID = client.Env
-		} else {
-			client.SetEnv(envID)
 		}
 
 		// Display the client info in a colorful way.
@@ -280,6 +269,7 @@ func init() {
 	monitorCmd.Flags().String("org", "", "The Business Group ID. If not provided, the id from the saved context will be loaded if present.")
 	monitorCmd.Flags().String("env", "", "The Environment ID. If not provided, the id from the saved context will be loaded if present")
 	monitorCmd.Flags().String("app", "", "The Application to monitor (optional)")
+	monitorCmd.Flags().StringP("token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all orgs and environments.")
 
 	// Define flags for specifying the time window for queries.
 	monitorCmd.Flags().String("last-called-window", "15m", "Time window for last-called query (e.g., 15m, 1h, 24h)")

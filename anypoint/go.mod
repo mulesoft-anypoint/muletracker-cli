@@ -8,7 +8,11 @@ require (
 	github.com/mulesoft-anypoint/muletracker-cli/config v0.0.0
 )
 
-require github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps v0.0.1
+require (
+	github.com/mulesoft-anypoint/anypoint-client-go/apim v0.1.1
+	github.com/mulesoft-anypoint/anypoint-client-go/apim_policy v0.0.1
+	github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps v0.0.1
+)
 
 require (
 	github.com/fsnotify/fsnotify v1.8.0 // indirect

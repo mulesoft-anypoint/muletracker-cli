@@ -19,24 +19,26 @@ var environmentsCmd = &cobra.Command{
 	Long:  `Retrieve and display Environment details for a specific Business Group, then allow selection of one to persist.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
-		businessGroupID, _ := cmd.Flags().GetString("org")
-		if businessGroupID == "" {
-			utils.PrintError("Please provide a business group ID using the --org flag.")
-			return
-		}
-
+		// Parse Flags
+		orgID, _ := cmd.Flags().GetString("org")
+		adminToken, _ := cmd.Flags().GetString("token")
 		// Retrieve the authenticated client.
-		client, err := anypoint.GetClientFromContext()
+		client, err := anypoint.GetInitializedClient(adminToken)
 		if err != nil {
-			utils.PrintError("Error retrieving client: %v\n", err)
+			utils.PrintError("Error retrieving client %v\n", err)
 			return
 		}
-
+		//Read Org ID
+		orgID, err = utils.ValidateOrg(client, orgID)
+		if err != nil {
+			utils.PrintError("Validation error: %v", err)
+			return
+		}
 		// Display the client info in a colorful way.
 		utils.PrintClientInfo(ctx, client)
 
 		// Retrieve environments for the provided business group.
-		environments, err := client.GetEnvironments(ctx, businessGroupID)
+		environments, err := client.GetEnvironments(ctx, orgID)
 		if err != nil {
 			utils.PrintError("Error retrieving environments: %v\n", err)
 			return
@@ -70,7 +72,7 @@ var environmentsCmd = &cobra.Command{
 
 		selectedEnv := environments[selection-1]
 
-		client.SetOrg(businessGroupID)
+		client.SetOrg(orgID)
 		client.SetEnv(selectedEnv.GetId())
 
 		fmt.Printf("Selected environment: %s (ID: %s)\n", selectedEnv.GetName(), selectedEnv.GetId())
@@ -80,5 +82,6 @@ var environmentsCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(environmentsCmd)
 	environmentsCmd.Flags().String("org", "", "The Business Group ID (required).")
-	environmentsCmd.MarkFlagRequired("org")
+	environmentsCmd.Flags().StringP("token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all orgs and environments.")
+
 }

@@ -15,6 +15,8 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/mulesoft-anypoint/anypoint-client-go/apim v0.1.1 // indirect
+	github.com/mulesoft-anypoint/anypoint-client-go/apim_policy v0.0.1 // indirect
 	github.com/mulesoft-anypoint/anypoint-client-go/authorization v0.3.0 // indirect
 	github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps v0.0.1 // indirect
 	github.com/mulesoft-anypoint/muletracker-cli/config v0.0.1 // indirect
