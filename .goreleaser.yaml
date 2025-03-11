@@ -1,0 +1,23 @@
+project_name: muletracker-cli
+release:
+  git:
+    disable: false
+builds:
+  - env: [CGO_ENABLED=0]
+    goos:
+      - darwin
+      - freebsd
+      - linux
+      - openbsd
+      - solaris
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    binary: muletracker-cli
+archives:
+  - format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md

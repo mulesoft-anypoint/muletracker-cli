@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
+	"github.com/mulesoft-anypoint/muletracker-cli/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -38,26 +39,26 @@ var connectCmd = &cobra.Command{
 
 		// Validate that we have credentials.
 		if clientId == "" || clientSecret == "" {
-			PrintError("Error: clientId and clientSecret are required. Please provide them via flags or ensure they are persisted in configuration.")
+			utils.PrintError("Error: clientId and clientSecret are required. Please provide them via flags or ensure they are persisted in configuration.")
 			return
 		}
 
 		// Validate control plane and determine the server index.
-		serverIndex := cplane2serverindex(controlPlane)
+		serverIndex := utils.Cplane2serverindex(controlPlane)
 		if serverIndex == -1 {
-			PrintError("Error: Invalid control plane. Valid values are 'eu', 'us', or 'gov'.")
+			utils.PrintError("Error: Invalid control plane. Valid values are 'eu', 'us', or 'gov'.")
 			return
 		}
 
 		// Create the client; this will obtain an access token and set its expiration.
 		client, err := anypoint.NewClient(ctx, serverIndex, clientId, clientSecret)
 		if err != nil {
-			PrintError("Error connecting to Anypoint: %v\n", err)
+			utils.PrintError("Error connecting to Anypoint: %v\n", err)
 			return
 		}
 
 		// Display the client info in a colorful way.
-		PrintClientInfo(ctx, client)
+		utils.PrintClientInfo(ctx, client)
 
 		fmt.Printf("Successfully connected. Access token valid until %s.\n", client.ExpiresAt.Format(time.RFC1123))
 	},

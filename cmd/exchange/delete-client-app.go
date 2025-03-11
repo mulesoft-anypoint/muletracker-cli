@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
+	"github.com/mulesoft-anypoint/muletracker-cli/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +27,7 @@ func deleteClientAppsConcurrently(ctx context.Context, client *anypoint.Client, 
 			defer func() { <-sem }() // Release semaphore.
 			<-rateLimiter.C          // Wait for rate limiter tick.
 			if err := client.DeleteExchangeClientApp(ctx, orgID, res.ClientApp.GetId()); err != nil {
-				PrintError("Error while deleting client app %s: %v\v", res.ClientApp.GetName(), err)
+				utils.PrintError("Error while deleting client app %s: %v\v", res.ClientApp.GetName(), err)
 			} else {
 				fmt.Printf("Deleted client app %s.\n", res.ClientApp.GetName())
 			}
@@ -39,7 +40,7 @@ func deleteClientAppsWithEmptyContracts(ctx context.Context, orgID string, clien
 	//Get All exchange client apps
 	list, err := client.GetExchangeClientApps(ctx, orgID, true)
 	if err != nil {
-		PrintError("Error retrieving Exchange Client Apps %v/n", err)
+		utils.PrintError("Error retrieving Exchange Client Apps %v/n", err)
 		return
 	}
 	//Get All exchange client apps contracts and filter them
@@ -65,51 +66,37 @@ var deleteClientAppCmd = &cobra.Command{
 		// Retrieve flags.
 		orgID, _ := cmd.Flags().GetString("org")
 		appIDStr, _ := cmd.Flags().GetString("id")
-		adminToken, _ := cmd.Flags().GetString("admin-token")
+		adminToken, _ := cmd.Flags().GetString("token")
 		filterByEmptyContract, _ := cmd.Flags().GetBool("with-empty-contract")
 		// Validate params
 		if appIDStr == "" && !filterByEmptyContract {
-			PrintError("Error: Application ID or filter is required to delete Exchange Client Applications.")
+			utils.PrintError("Error: Application ID or filter is required to delete Exchange Client Applications.")
 			return
 		}
 		// Retrieve the authenticated client.
-		var client *anypoint.Client
-		if adminToken != "" {
-			client, err = anypoint.GetClientFromContext(anypoint.WithSkipTokenExpiration())
-			if err != nil {
-				PrintError("Error retrieving client: %v\n", err)
-				return
-			}
-			client.SetAdminAccessToken(adminToken)
-		} else {
-			client, err = anypoint.GetClientFromContext()
-			if err != nil {
-				PrintError("Error retrieving client: %v\n", err)
-				return
-			}
-		}
-		//Read Org ID
-		if client.IsOrgEmpty() && orgID == "" {
-			PrintError("Please provide --org flag")
+		client, err := anypoint.GetInitializedClient(adminToken)
+		if err != nil {
+			utils.PrintError("Error retrieving client %v\n", err)
 			return
 		}
-		if orgID == "" {
-			orgID = client.Org
-		} else {
-			client.SetOrg(orgID)
+		//Read Org ID
+		orgID, err = utils.ValidateOrg(client, orgID)
+		if err != nil {
+			utils.PrintError("Validation error: %v", err)
+			return
 		}
 		// Display the client info in a colorful way.
-		PrintClientInfo(ctx, client)
+		utils.PrintClientInfo(ctx, client)
 		if filterByEmptyContract {
 			deleteClientAppsWithEmptyContracts(ctx, orgID, client)
 		} else {
 			appID, err := strconv.Atoi(appIDStr)
 			if err != nil {
-				PrintError("Error: Application ID is unvalid.")
+				utils.PrintError("Error: Application ID is unvalid.")
 				return
 			}
 			if err := client.DeleteExchangeClientApp(ctx, orgID, int32(appID)); err != nil {
-				PrintError("Error deleting the application client %v\n", err)
+				utils.PrintError("Error deleting the application client %v\n", err)
 				return
 			}
 			fmt.Printf("Deleted Exchange application with ID: %s\n", appIDStr)
@@ -120,6 +107,6 @@ var deleteClientAppCmd = &cobra.Command{
 func init() {
 	deleteClientAppCmd.Flags().String("org", "", "The Business Group ID. If not provided, the id from the saved context will be loaded if present.")
 	deleteClientAppCmd.Flags().String("id", "", "ID of the Exchange application to delete (optional). Either this flag should be present or the empty contract should be present.")
-	deleteClientAppCmd.Flags().StringP("admin-token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications.")
+	deleteClientAppCmd.Flags().StringP("token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications.")
 	deleteClientAppCmd.Flags().Bool("with-empty-contract", false, "ID of the Exchange application to delete (optional). Either this flag should be present or the id of the app you want to delete.")
 }

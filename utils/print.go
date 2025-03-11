@@ -1,8 +1,7 @@
-package exchange
+package utils
 
 import (
 	"context"
-	"encoding/csv"
 	"fmt"
 	"os"
 	"sort"
@@ -15,21 +14,8 @@ import (
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
 )
 
-func serverindex2cplane(index int) string {
-	switch index {
-	case 0:
-		return "us"
-	case 1:
-		return "eu"
-	case 2:
-		return "gov"
-	default:
-		return "unknown"
-	}
-}
-
 // PrintError prints an error message in red and bold to standard error.
-func PrintError(format string, a ...interface{}) {
+func PrintError(format string, a ...any) {
 	errPrinter := color.New(color.FgRed, color.Bold).SprintfFunc()
 	msg := fmt.Sprintf(format, a...)
 	fmt.Fprintln(os.Stderr, errPrinter(msg))
@@ -55,8 +41,8 @@ func PrintClientInfo(ctx context.Context, client *anypoint.Client) {
 		}
 	}
 
-	data := map[string]interface{}{
-		"* Control Plane":     strings.ToUpper(serverindex2cplane(client.ServerIndex)),
+	data := map[string]any{
+		"* Control Plane":     strings.ToUpper(Serverindex2cplane(client.ServerIndex)),
 		"* Business Group Id": bg.GetName(),
 		"* Environment Id":    env,
 		"* Connected App":     client.ClientId,
@@ -64,15 +50,16 @@ func PrintClientInfo(ctx context.Context, client *anypoint.Client) {
 		// "InfluxDB ID":             client.InfluxDbId,
 	}
 
-	PrintSimpleResults("Client Information:", data)
+	PrintHeaderMap("Client Information:", data)
 }
 
-// PrintSimpleResults prints a header and key/value pairs in a simple, aligned style.
-func PrintSimpleResults(header string, data map[string]interface{}) {
+// PrintHeaderMap prints a header and key/value pairs in a simple, aligned style.
+// The header is highlighted in blue (with bold), and the keys are printed in cyan.
+func PrintHeaderMap(header string, data map[string]any) {
 	// Define color functions.
-	headerColor := color.New(color.FgGreen, color.Bold).SprintFunc()
-	keyColor := color.New(color.FgYellow).SprintFunc()
-	valueColor := color.New(color.FgWhite).SprintFunc()
+	blueBold := color.New(color.FgBlue, color.Bold).SprintFunc()
+	cyan := color.New(color.FgCyan).SprintFunc()
+	white := color.New(color.FgWhite).SprintFunc()
 
 	// Determine the maximum key width for alignment.
 	maxKeyLength := 0
@@ -86,12 +73,13 @@ func PrintSimpleResults(header string, data map[string]interface{}) {
 	// Sort keys alphabetically.
 	sort.Strings(keys)
 
-	// Define a divider line.
-	divider := strings.Repeat("-", maxKeyLength+25)
+	// Create a divider line using "=".
+	divider := strings.Repeat("=", maxKeyLength+25)
 
-	// Print the header.
-	fmt.Println(headerColor(header))
-	fmt.Println(divider)
+	// Print the header in a decorative box.
+	fmt.Println(blueBold(divider))
+	fmt.Println(blueBold(fmt.Sprintf("==  %s  ==", header)))
+	fmt.Println(blueBold(divider))
 
 	// Print each key/value pair.
 	for _, key := range keys {
@@ -105,22 +93,22 @@ func PrintSimpleResults(header string, data map[string]interface{}) {
 				formattedVal = t.Format(time.RFC1123)
 			}
 		default:
-			formattedVal = fmt.Sprintf("%v", val)
+			formattedVal = fmt.Sprintf("%v", t)
 		}
 
 		// Left-align the key using the maximum width.
-		fmt.Printf("%-*s: %s\n", maxKeyLength, keyColor(key), valueColor(formattedVal))
+		fmt.Printf("%-*s: %s\n", maxKeyLength, cyan(key), white(formattedVal))
 	}
 
-	// Print the divider again.
-	fmt.Println(divider)
+	// Print the closing divider.
+	fmt.Println(blueBold(divider))
 }
 
-// PrintGenericTable prints a table from a slice of map[string]interface{}.
+// PrintGenericTable prints a table from a slice of map[string]any.
 // Each map represents a row and keys represent columns.
 // An optional headerOrder slice can be provided to control column order.
 // If headerOrder is empty, the union of keys is computed and sorted alphabetically.
-func PrintGenericTable(data []map[string]interface{}, headerOrder []string) {
+func PrintGenericTable(data []map[string]any, headerOrder []string) {
 	if len(data) == 0 {
 		fmt.Println("No data to display.")
 		return
@@ -169,53 +157,17 @@ func PrintGenericTable(data []map[string]interface{}, headerOrder []string) {
 	w.Flush()
 }
 
-// ExportGenericCSV writes a slice of map[string]interface{} to a CSV file.
-// The CSV file will contain a header row (either provided via headerOrder or computed)
-// and one row per data map.
-func ExportGenericCSV(fileName string, data []map[string]interface{}, headerOrder []string) error {
-	// Open the file for writing (create or truncate)
-	file, err := os.Create(fileName)
-	if err != nil {
-		return fmt.Errorf("failed to create file %q: %w", fileName, err)
-	}
-	defer file.Close()
+// PrintHighlightedMessage prints the given message inside a decorative box.
+func PrintHighlightedMessage(message string) {
+	// Determine the width of the box. We'll add 8 extra characters for padding and borders.
+	width := len(message) + 8
+	// Create a border line.
+	border := strings.Repeat("=", width)
+	// Create a colored printer for cyan bold text.
+	cyanBold := color.New(color.FgCyan, color.Bold).SprintFunc()
 
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	// If no header order is provided, compute the union of keys from the data.
-	if len(headerOrder) == 0 {
-		headerMap := make(map[string]struct{})
-		for _, row := range data {
-			for key := range row {
-				headerMap[key] = struct{}{}
-			}
-		}
-		for key := range headerMap {
-			headerOrder = append(headerOrder, key)
-		}
-		sort.Strings(headerOrder)
-	}
-
-	// Write the header row.
-	if err := writer.Write(headerOrder); err != nil {
-		return fmt.Errorf("error writing header to CSV: %w", err)
-	}
-
-	// Write each row.
-	for _, row := range data {
-		record := make([]string, len(headerOrder))
-		for i, key := range headerOrder {
-			if val, ok := row[key]; ok {
-				record[i] = fmt.Sprintf("%v", val)
-			} else {
-				record[i] = ""
-			}
-		}
-		if err := writer.Write(record); err != nil {
-			return fmt.Errorf("error writing record to CSV: %w", err)
-		}
-	}
-
-	return nil
+	// Print the box.
+	fmt.Println(cyanBold(border))
+	fmt.Println(cyanBold(fmt.Sprintf("==  %s  ==", message)))
+	fmt.Println(cyanBold(border))
 }

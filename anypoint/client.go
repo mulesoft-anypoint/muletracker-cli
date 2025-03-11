@@ -191,6 +191,28 @@ func GetClientFromContext(opts ...GetClientOption) (*Client, error) {
 	return globalClient, nil
 }
 
+// GetInitializedClient retrieves the authenticated client.
+// If an admin token is provided, it uses it (skipping token expiration check) and sets it on the client.
+// Otherwise, it retrieves the regular connected app client.
+func GetInitializedClient(adminToken string) (*Client, error) {
+	var client *Client
+	var err error
+
+	if adminToken != "" {
+		client, err = GetClientFromContext(WithSkipTokenExpiration())
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving client: %w", err)
+		}
+		client.SetAdminAccessToken(adminToken)
+	} else {
+		client, err = GetClientFromContext()
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving client: %w", err)
+		}
+	}
+	return client, nil
+}
+
 func isTokenExpired(expiresAt time.Time) bool {
 	return time.Now().After(expiresAt)
 }

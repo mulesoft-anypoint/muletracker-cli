@@ -14,6 +14,7 @@ var RuntimeCmd = &cobra.Command{
 func init() {
 	// Add subcommands to RuntimeCmd.
 	RuntimeCmd.AddCommand(listAppsCmd)
+	RuntimeCmd.AddCommand(monitorCmd)
 
 	// Here you can add persistent flags for the exchange group if needed.
 	// For example, a flag to specify an environment or organization ID if they are common to all subcommands.

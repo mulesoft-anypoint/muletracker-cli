@@ -1,4 +1,4 @@
-package cmd
+package runtime
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
+	"github.com/mulesoft-anypoint/muletracker-cli/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -119,8 +120,8 @@ func filterAppResults(results []AppResult, filterFlag string) []AppResult {
 	return filtered
 }
 
-func AppResult2Map(results []AppResult) ([]map[string]interface{}, []string) {
-	data := make([]map[string]interface{}, 0)
+func AppResult2Map(results []AppResult) ([]map[string]any, []string) {
+	data := make([]map[string]any, 0)
 	for _, r := range results {
 		var lastCalled string
 		if r.LastCalled.IsZero() {
@@ -128,7 +129,7 @@ func AppResult2Map(results []AppResult) ([]map[string]interface{}, []string) {
 		} else {
 			lastCalled = r.LastCalled.Format(time.RFC1123)
 		}
-		data = append(data, map[string]interface{}{
+		data = append(data, map[string]any{
 			"App ID":        r.AppID,
 			"Type":          r.AppType,
 			"Last Called":   lastCalled,
@@ -144,12 +145,12 @@ func AppResult2Map(results []AppResult) ([]map[string]interface{}, []string) {
 // using tabwriter for alignment.
 func printAppsSummaryTable(results []AppResult) {
 	data, order := AppResult2Map(results)
-	PrintGenericTable(data, order)
+	utils.PrintGenericTable(data, order)
 }
 
 func ExportAppResultToCSV(fileName string, results []AppResult) error {
 	data, order := AppResult2Map(results)
-	return ExportGenericCSV(fileName, data, order)
+	return utils.ExportGenericCSV(fileName, data, order)
 }
 
 // ----- Main Command ----- //
@@ -174,39 +175,28 @@ Filters:
 		orgID, _ := cmd.Flags().GetString("org")
 		envID, _ := cmd.Flags().GetString("env")
 		appID, _ := cmd.Flags().GetString("app")
+		adminToken, _ := cmd.Flags().GetString("token")
 		lcWindow, _ := cmd.Flags().GetString("last-called-window")
 		rcWindow, _ := cmd.Flags().GetString("request-count-window")
 		dataFilter, _ := cmd.Flags().GetString("filter")
 		appType, _ := cmd.Flags().GetString("app-type")
 		exportFile, _ := cmd.Flags().GetString("out")
 
-		// Retrieve the previously connected client from context.
-		client, err := anypoint.GetClientFromContext()
+		// Retrieve the authenticated client.
+		client, err := anypoint.GetInitializedClient(adminToken)
 		if err != nil {
-			PrintError("Error retrieving client %v\n", err)
+			utils.PrintError("Error retrieving client %v\n", err)
 			return
 		}
-
-		// Check that the required flags are provided.
-		if (client.IsOrgEmpty() && orgID == "") || (client.IsEnvEmpty() && envID == "") {
-			PrintError("Please provide --org, --env flags")
+		// Validate organization and environment.
+		orgID, envID, err = utils.ValidateOrgEnv(client, orgID, envID)
+		if err != nil {
+			utils.PrintError("Validation error: %v", err)
 			return
-		}
-
-		//Load org and env if necessary
-		if orgID == "" {
-			orgID = client.Org
-		} else {
-			client.SetOrg(orgID)
-		}
-		if envID == "" {
-			envID = client.Env
-		} else {
-			client.SetEnv(envID)
 		}
 
 		// Display the client info in a colorful way.
-		PrintClientInfo(ctx, client)
+		utils.PrintClientInfo(ctx, client)
 
 		// Build type filters based on app-type flag.
 		var typeFilters []anypoint.AppFilter = []anypoint.AppFilter{anypoint.FilterRunning}
@@ -222,7 +212,7 @@ Filters:
 		// Retrieve apps to monitor.
 		apps, err := getAppsToMonitor(ctx, client, orgID, envID, appID, typeFilters...)
 		if err != nil {
-			PrintError("Error retrieving apps: %v\n", err)
+			utils.PrintError("Error retrieving apps: %v\n", err)
 			return
 		}
 
@@ -238,7 +228,7 @@ Filters:
 			fmt.Printf("* Using request count window: %s\n", rcWindow)
 			fmt.Printf("\n* Collection monitoring data for %s application only\n", appID)
 			if result.Err != nil {
-				PrintError("Error monitoring app %s: %v\n", appID, result.Err)
+				utils.PrintError("Error monitoring app %s: %v\n", appID, result.Err)
 				return
 			}
 			finalResults = []AppResult{result}
@@ -262,7 +252,7 @@ Filters:
 		if exportFile != "" {
 			err := ExportAppResultToCSV(exportFile, finalResults)
 			if err != nil {
-				PrintError("Error exporting results to CSV: %v\n", err)
+				utils.PrintError("Error exporting results to CSV: %v\n", err)
 				return
 			}
 			fmt.Printf("\nResults successfully exported to %s\n", exportFile)
@@ -275,13 +265,11 @@ Filters:
 }
 
 func init() {
-	// Add the monitor command to the root command.
-	rootCmd.AddCommand(monitorCmd)
-
 	// Define flags for organization, environment, and application IDs.
 	monitorCmd.Flags().String("org", "", "The Business Group ID. If not provided, the id from the saved context will be loaded if present.")
 	monitorCmd.Flags().String("env", "", "The Environment ID. If not provided, the id from the saved context will be loaded if present")
 	monitorCmd.Flags().String("app", "", "The Application to monitor (optional)")
+	monitorCmd.Flags().StringP("token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all orgs and environments.")
 
 	// Define flags for specifying the time window for queries.
 	monitorCmd.Flags().String("last-called-window", "15m", "Time window for last-called query (e.g., 15m, 1h, 24h)")

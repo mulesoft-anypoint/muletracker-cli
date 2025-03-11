@@ -10,6 +10,7 @@ import (
 
 	"github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps"
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
+	"github.com/mulesoft-anypoint/muletracker-cli/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -105,8 +106,8 @@ func FilterClientAppResults(results []ClientAppResult, filterFlag string) []Clie
 	return filtered
 }
 
-func ClientAppResult2Map(results []ClientAppResult) ([]map[string]interface{}, []string) {
-	data := make([]map[string]interface{}, 0)
+func ClientAppResult2Map(results []ClientAppResult) ([]map[string]any, []string) {
+	data := make([]map[string]any, 0)
 	for _, r := range results {
 		total := len(r.Contracts)
 		countMap := CountContractsByStatus(r.Contracts)
@@ -122,7 +123,7 @@ func ClientAppResult2Map(results []ClientAppResult) ([]map[string]interface{}, [
 		if val, ok := countMap["PENDING"]; ok {
 			pending = val
 		}
-		data = append(data, map[string]interface{}{
+		data = append(data, map[string]any{
 			"App ID":             r.ClientApp.GetId(),
 			"App Name":           r.ClientApp.GetName(),
 			"Client ID":          r.ClientApp.GetClientId(),
@@ -139,12 +140,12 @@ func ClientAppResult2Map(results []ClientAppResult) ([]map[string]interface{}, [
 
 func PrintClientAppsSummaryTable(results []ClientAppResult) {
 	data, order := ClientAppResult2Map(results)
-	PrintGenericTable(data, order)
+	utils.PrintGenericTable(data, order)
 }
 
 func ExportClientAppsSummaryTable(fileName string, results []ClientAppResult) error {
 	data, order := ClientAppResult2Map(results)
-	return ExportGenericCSV(fileName, data, order)
+	return utils.ExportGenericCSV(fileName, data, order)
 }
 
 var listClientAppsCmd = &cobra.Command{
@@ -158,43 +159,28 @@ var listClientAppsCmd = &cobra.Command{
 		// Retrieve flags.
 		filterContract, _ := cmd.Flags().GetString("filter-contract")
 		orgID, _ := cmd.Flags().GetString("org")
-		adminToken, _ := cmd.Flags().GetString("admin-token")
+		adminToken, _ := cmd.Flags().GetString("token")
 		exportFile, _ := cmd.Flags().GetString("out")
 		// Retrieve the authenticated client.
-		var client *anypoint.Client
-		var err error
-		if adminToken != "" {
-			client, err = anypoint.GetClientFromContext(anypoint.WithSkipTokenExpiration())
-			if err != nil {
-				PrintError("Error retrieving client: %v\n", err)
-				return
-			}
-			client.SetAdminAccessToken(adminToken)
-		} else {
-			client, err = anypoint.GetClientFromContext()
-			if err != nil {
-				PrintError("Error retrieving client: %v\n", err)
-				return
-			}
-		}
-		//Read Org ID
-		if client.IsOrgEmpty() && orgID == "" {
-			PrintError("Please provide --org flag")
+		client, err := anypoint.GetInitializedClient(adminToken)
+		if err != nil {
+			utils.PrintError("Error retrieving client %v\n", err)
 			return
 		}
-		if orgID == "" {
-			orgID = client.Org
-		} else {
-			client.SetOrg(orgID)
+		//Read Org ID
+		orgID, err = utils.ValidateOrg(client, orgID)
+		if err != nil {
+			utils.PrintError("Validation error: %v\n", err)
+			return
 		}
 		//Get All exchange client apps
 		list, err := client.GetExchangeClientApps(ctx, orgID, true)
 		if err != nil {
-			PrintError("Error retrieving Exchange Client Apps %v/n", err)
+			utils.PrintError("Error retrieving Exchange Client Apps %v\n", err)
 			return
 		}
 		// Display the client info in a colorful way.
-		PrintClientInfo(ctx, client)
+		utils.PrintClientInfo(ctx, client)
 		//Get All exchange client apps contracts
 		allResults := ListExchClientAppsConcurrently(ctx, client, orgID, list)
 		fmt.Printf("* Collected contract data for %d apps.\n", len(allResults))
@@ -209,7 +195,7 @@ var listClientAppsCmd = &cobra.Command{
 		if exportFile != "" {
 			err := ExportClientAppsSummaryTable(exportFile, finalResults)
 			if err != nil {
-				PrintError("Error exporting results to CSV: %v\n", err)
+				utils.PrintError("Error exporting results to CSV: %v\n", err)
 				return
 			}
 			fmt.Printf("\nResults successfully exported to %s\n", exportFile)
@@ -222,7 +208,7 @@ var listClientAppsCmd = &cobra.Command{
 
 func init() {
 	listClientAppsCmd.Flags().String("org", "", "The Business Group ID. This should be the root org id")
-	listClientAppsCmd.Flags().StringP("admin-token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
+	listClientAppsCmd.Flags().StringP("token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all the org's client applications")
 	//Filters
 	listClientAppsCmd.Flags().String("filter-contract", "all", "Filter results: all (default), nonempty (only client apps with contracts), or empty (only client apps with no contracts)")
 	// export flags
