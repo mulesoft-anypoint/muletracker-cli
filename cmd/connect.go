@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
@@ -60,7 +59,7 @@ var connectCmd = &cobra.Command{
 		// Display the client info in a colorful way.
 		utils.PrintClientInfo(ctx, client)
 
-		fmt.Printf("Successfully connected. Access token valid until %s.\n", client.ExpiresAt.Format(time.RFC1123))
+		utils.PrintSuccess("Successfully connected. Access token valid until %s.", client.ExpiresAt.Format(time.RFC1123))
 	},
 }
 

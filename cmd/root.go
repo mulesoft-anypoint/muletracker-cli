@@ -16,10 +16,13 @@ import (
 var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands.
+var Version = "dev" // Set by build flags
+
 var rootCmd = &cobra.Command{
-	Use:   "MuleTracket",
-	Short: "MuleTracket CLI for MuleSoft Monitoring and Management",
-	Long: `MuleTracket is a comprehensive CLI tool built in Go for managing and monitoring MuleSoft environments.
+	Use:     "MuleTracker",
+	Short:   "MuleTracker CLI for MuleSoft Monitoring and Management",
+	Version: Version,
+	Long: `MuleTracker is a comprehensive CLI tool built in Go for managing and monitoring MuleSoft environments.
 It provides a unified interface to perform operations across different facets of MuleSoft:
 
   • Connect:
@@ -42,7 +45,7 @@ It provides a unified interface to perform operations across different facets of
 Configuration is managed via a file (default: $HOME/.muletracker.yaml), which you can override using the --config flag.
 Each command is designed to provide colorful, aligned output and clear error messages for a user-friendly experience.
 
-Use 'MuleTracket -h' to see available commands and options.`,
+Use 'MuleTracker -h' to see available commands and options.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Initialize configuration using our config package.
 		if err := config.InitConfig(cfgFile); err != nil {
@@ -52,11 +55,12 @@ Use 'MuleTracket -h' to see available commands and options.`,
 		utils.PrintHighlightedMessage(fmt.Sprintf("Using config file: %s", viper.ConfigFileUsed()))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Welcome to MuleTracket CLI. Use -h for help on available commands.")
+		fmt.Println("Welcome to MuleTracker CLI. Use -h for help on available commands.")
 	},
 }
 
 func init() {
+	rootCmd.SetVersionTemplate(`{{printf "%s version %s\n" .Name .Version}}`)
 	rootCmd.AddCommand(exchange.ExchangeCmd)
 	rootCmd.AddCommand(runtime.RuntimeCmd)
 	rootCmd.AddCommand(apim.ApimCmd)

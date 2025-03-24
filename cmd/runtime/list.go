@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
@@ -93,7 +92,7 @@ var listAppsCmd = &cobra.Command{
 				utils.PrintError("Error exporting results to CSV: %v\n", err)
 				return
 			}
-			fmt.Printf("\nResults successfully exported to %s\n", exportFile)
+			utils.PrintSuccess("Results successfully exported to %s", exportFile)
 		} else {
 			// Otherwise, print a summary table.
 			printListAppsTable(apps)

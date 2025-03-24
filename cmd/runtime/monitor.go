@@ -217,16 +217,16 @@ Filters:
 		}
 
 		if len(apps) == 0 {
-			fmt.Println("No apps found for the given org and env.")
+			utils.PrintWarning("No apps found for the given org and env.")
 			return
 		}
 		var finalResults []AppResult
 		// If a single app was specified, run in single-app mode.
 		if appID != "" {
 			result := monitorSingleApp(ctx, client, orgID, envID, apps[0], lcWindow, rcWindow)
-			fmt.Printf("\n* Using last-called window: %s\n", lcWindow)
-			fmt.Printf("* Using request count window: %s\n", rcWindow)
-			fmt.Printf("\n* Collection monitoring data for %s application only\n", appID)
+			utils.PrintInfo("Using last-called window: %s\n", lcWindow)
+			utils.PrintInfo("Using request count window: %s\n", rcWindow)
+			utils.PrintInfo("Collection monitoring data for %s application only\n", appID)
 			if result.Err != nil {
 				utils.PrintError("Error monitoring app %s: %v\n", appID, result.Err)
 				return
@@ -235,15 +235,15 @@ Filters:
 		} else {
 			// Monitor all apps concurrently.
 			allResults := monitorAppsConcurrently(ctx, client, orgID, envID, lcWindow, rcWindow, apps)
-			fmt.Printf("\n* Using last-called window: %s\n", lcWindow)
-			fmt.Printf("* Using request count window: %s\n", rcWindow)
-			fmt.Printf("* Found %d apps to monitor.\n", len(apps))
-			fmt.Printf("* Collected monitoring data for %d apps.\n", len(allResults))
+			utils.PrintInfo("Using last-called window: %s\n", lcWindow)
+			utils.PrintInfo("Using request count window: %s\n", rcWindow)
+			utils.PrintInfo("Found %d apps to monitor.\n", len(apps))
+			utils.PrintInfo("Collected monitoring data for %d apps.\n", len(allResults))
 			// Apply filter.
 			finalResults = filterAppResults(allResults, dataFilter)
-			fmt.Printf("* After applying filter '%s', %d apps remain.\n", dataFilter, len(finalResults))
+			utils.PrintInfo("After applying filter '%s', %d apps remain.\n", dataFilter, len(finalResults))
 			if len(finalResults) == 0 {
-				fmt.Println("No apps match the filter criteria.")
+				utils.PrintWarning("No apps match the filter criteria.")
 				return
 			}
 		}
@@ -255,7 +255,7 @@ Filters:
 				utils.PrintError("Error exporting results to CSV: %v\n", err)
 				return
 			}
-			fmt.Printf("\nResults successfully exported to %s\n", exportFile)
+			utils.PrintSuccess("Results successfully exported to %s", exportFile)
 		} else {
 			// Otherwise, print a summary table.
 			printAppsSummaryTable(finalResults)

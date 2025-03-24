@@ -183,12 +183,12 @@ var listClientAppsCmd = &cobra.Command{
 		utils.PrintClientInfo(ctx, client)
 		//Get All exchange client apps contracts
 		allResults := ListExchClientAppsConcurrently(ctx, client, orgID, list)
-		fmt.Printf("* Collected contract data for %d apps.\n", len(allResults))
+		utils.PrintInfo("* Collected contract data for %d apps.\n", len(allResults))
 		// Apply filter.
 		finalResults := FilterClientAppResults(allResults, filterContract)
-		fmt.Printf("* After applying filter '%s', %d client apps remain.\n", filterContract, len(finalResults))
+		utils.PrintInfo("* After applying filter '%s', %d client apps remain.\n", filterContract, len(finalResults))
 		if len(finalResults) == 0 {
-			fmt.Println("No apps match the filter criteria.")
+			utils.PrintWarning("No apps match the filter criteria.")
 			return
 		}
 		// If export flag is provided, export results to CSV.
@@ -198,7 +198,7 @@ var listClientAppsCmd = &cobra.Command{
 				utils.PrintError("Error exporting results to CSV: %v\n", err)
 				return
 			}
-			fmt.Printf("\nResults successfully exported to %s\n", exportFile)
+			utils.PrintSuccess("Results successfully exported to %s\n", exportFile)
 		} else {
 			// Otherwise, print a summary table.
 			PrintClientAppsSummaryTable(finalResults)

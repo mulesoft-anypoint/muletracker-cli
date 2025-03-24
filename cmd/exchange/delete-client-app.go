@@ -57,9 +57,20 @@ func deleteClientAppsWithEmptyContracts(ctx context.Context, orgID string, clien
 }
 
 var deleteClientAppCmd = &cobra.Command{
-	Use:   "delete-client-app",
-	Short: "Delete an Exchange client application",
-	Long:  `Delete an Exchange client application. You must provide the application ID or name.`,
+	Use:     "delete-client-app",
+	Short:   "Delete an Exchange client application",
+	Long:    `Delete an Exchange client application. You must provide the application ID or name.`,
+	Example: `mule-tracker exchange delete-client-app --org <orgID> --id <appID>`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		if !cmd.Flags().Changed("id") {
+			utils.GetConfirmed("Are you sure you want to delete this Exchange client application?")
+			return
+		}
+		if !cmd.Flags().Changed("with-empty-contract") {
+			utils.GetConfirmed("Are you sure you want to delete all Exchange client applications with empty contracts?")
+			return
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
 		ctx := cmd.Context()
@@ -99,7 +110,7 @@ var deleteClientAppCmd = &cobra.Command{
 				utils.PrintError("Error deleting the application client %v\n", err)
 				return
 			}
-			fmt.Printf("Deleted Exchange application with ID: %s\n", appIDStr)
+			utils.PrintSuccess("Deleted Exchange application with ID: %s\n", appIDStr)
 		}
 	},
 }

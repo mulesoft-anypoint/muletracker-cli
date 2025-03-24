@@ -75,7 +75,7 @@ var environmentsCmd = &cobra.Command{
 		client.SetOrg(orgID)
 		client.SetEnv(selectedEnv.GetId())
 
-		fmt.Printf("Selected environment: %s (ID: %s)\n", selectedEnv.GetName(), selectedEnv.GetId())
+		utils.PrintSuccess("Selected environment: %s (ID: %s)", selectedEnv.GetName(), selectedEnv.GetId())
 	},
 }
 
