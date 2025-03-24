@@ -14,10 +14,27 @@ import (
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
 )
 
+// PrintSuccess prints success messages in green
+func PrintSuccess(format string, args ...any) {
+	color.New(color.FgGreen).Printf("✓ "+format+"\n", args...)
+}
+
+// PrintInfo prints information messages in blue
+func PrintInfo(format string, args ...any) {
+	color.New(color.FgBlue).Printf("* "+format+"\n", args...)
+}
+
+// PrintWarning prints a warning message in yellow and bold.
+func PrintWarning(format string, args ...any) {
+	warningPrinter := color.New(color.FgYellow, color.Bold).SprintfFunc()
+	msg := fmt.Sprintf(format, args...)
+	fmt.Fprintln(os.Stderr, warningPrinter(msg))
+}
+
 // PrintError prints an error message in red and bold to standard error.
-func PrintError(format string, a ...any) {
+func PrintError(format string, args ...any) {
 	errPrinter := color.New(color.FgRed, color.Bold).SprintfFunc()
-	msg := fmt.Sprintf(format, a...)
+	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintln(os.Stderr, errPrinter(msg))
 }
 
@@ -74,11 +91,11 @@ func PrintHeaderMap(header string, data map[string]any) {
 	sort.Strings(keys)
 
 	// Create a divider line using "=".
-	divider := strings.Repeat("=", maxKeyLength+25)
+	divider := strings.Repeat("-", maxKeyLength+25)
 
 	// Print the header in a decorative box.
 	fmt.Println(blueBold(divider))
-	fmt.Println(blueBold(fmt.Sprintf("==  %s  ==", header)))
+	fmt.Println(blueBold(fmt.Sprintf("--  %s  --", header)))
 	fmt.Println(blueBold(divider))
 
 	// Print each key/value pair.
@@ -97,7 +114,7 @@ func PrintHeaderMap(header string, data map[string]any) {
 		}
 
 		// Left-align the key using the maximum width.
-		fmt.Printf("%-*s: %s\n", maxKeyLength, cyan(key), white(formattedVal))
+		fmt.Printf("%s\n", cyan(fmt.Sprintf("%-*s: %s", maxKeyLength, key, white(formattedVal))))
 	}
 
 	// Print the closing divider.
@@ -162,12 +179,12 @@ func PrintHighlightedMessage(message string) {
 	// Determine the width of the box. We'll add 8 extra characters for padding and borders.
 	width := len(message) + 8
 	// Create a border line.
-	border := strings.Repeat("=", width)
+	border := strings.Repeat("-", width)
 	// Create a colored printer for cyan bold text.
 	cyanBold := color.New(color.FgCyan, color.Bold).SprintFunc()
 
 	// Print the box.
 	fmt.Println(cyanBold(border))
-	fmt.Println(cyanBold(fmt.Sprintf("==  %s  ==", message)))
+	fmt.Println(cyanBold(fmt.Sprintf("--  %s  --", message)))
 	fmt.Println(cyanBold(border))
 }
