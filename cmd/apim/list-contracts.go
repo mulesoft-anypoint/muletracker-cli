@@ -75,7 +75,7 @@ func GetSingleApiContracts(ctx context.Context, client *anypoint.Client, orgID, 
 }
 
 func GetApiContractsConcurrently(ctx context.Context, client *anypoint.Client, orgID, envID string) ([]ApiContracts, error) {
-	const concurrencyLimit = 10
+	const concurrencyLimit = 5
 	var allContracts []ApiContracts
 	assets, err := client.GetAllApis(ctx, orgID, envID)
 	if err != nil {
@@ -87,8 +87,8 @@ func GetApiContractsConcurrently(ctx context.Context, client *anypoint.Client, o
 	var wg sync.WaitGroup
 	resultsCh := make(chan *ApiContracts, CountApis(assets))
 
-	// Create a rate limiter ticker: 10 requests per second.
-	rateLimiter := time.NewTicker(100 * time.Millisecond)
+	// Create a rate limiter ticker: 5 requests per second.
+	rateLimiter := time.NewTicker(250 * time.Millisecond)
 	defer rateLimiter.Stop()
 
 	for _, asset := range assets {
@@ -135,7 +135,7 @@ func GetApiContractsConcurrently(ctx context.Context, client *anypoint.Client, o
 }
 
 func GetContractsDetailsConcurrently(ctx context.Context, client *anypoint.Client, orgID, envID, apiID string) ([]apim_contract.ContractDetails, error) {
-	const concurrencyLimit = 10
+	const concurrencyLimit = 5
 	contracts, err := client.GetApiContracts(ctx, orgID, envID, apiID)
 	if err != nil {
 		utils.PrintError("Error getting contracts for API %s: %v", apiID, err)
@@ -146,8 +146,8 @@ func GetContractsDetailsConcurrently(ctx context.Context, client *anypoint.Clien
 	var wg sync.WaitGroup
 	resultsCh := make(chan *apim_contract.ContractDetails, len(contracts))
 
-	// Create a rate limiter ticker: 10 requests per second.
-	rateLimiter := time.NewTicker(100 * time.Millisecond)
+	// Create a rate limiter ticker
+	rateLimiter := time.NewTicker(250 * time.Millisecond)
 	defer rateLimiter.Stop()
 
 	//for each contact get details

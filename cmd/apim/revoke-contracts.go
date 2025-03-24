@@ -47,13 +47,13 @@ func RevokeAllApiContracts(ctx context.Context, client *anypoint.Client, orgID, 
 }
 
 func RevokeApiContractsConcurrently(ctx context.Context, client *anypoint.Client, orgID, envID string, contract *ApiContracts) int {
-	const concurrencyLimit = 10
+	const concurrencyLimit = 5
 	sem := make(chan struct{}, concurrencyLimit)
 	var wg sync.WaitGroup
 	var lock sync.RWMutex
 
-	// Create a rate limiter ticker: 10 requests per second.
-	rateLimiter := time.NewTicker(100 * time.Millisecond)
+	// Create a rate limiter ticker: 5 requests per second.
+	rateLimiter := time.NewTicker(250 * time.Millisecond)
 	defer rateLimiter.Stop()
 
 	count := 0

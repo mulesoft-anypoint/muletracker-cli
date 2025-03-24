@@ -120,6 +120,10 @@ github.com/magiconair/properties v1.8.9 h1:nWcCbLq1N2v/cpNsy5WvQ37Fb+YElfq20WJ/a
 github.com/magiconair/properties v1.8.9/go.mod h1:Dhd985XPs7jluiymwWYZ0G4Z61jb3vdS329zhj2hYo0=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
+github.com/mulesoft-anypoint/anypoint-client-go/apim v0.3.1 h1:mCYW8EEkxgq+ADtVrIkKndrlLGdGv1oxuV8BgufemvU=
+github.com/mulesoft-anypoint/anypoint-client-go/apim v0.3.1/go.mod h1:laA1EsyHnvc7fF1TqEmohyGZx7CMCXvfVItAnhOM0ks=
+github.com/mulesoft-anypoint/anypoint-client-go/apim_contract v0.1.0 h1:jpxjmFMLTCKcg5DhliQ7FAdpmecTqwzdRYohsgUvhug=
+github.com/mulesoft-anypoint/anypoint-client-go/apim_contract v0.1.0/go.mod h1:vHnrmHr+xuAVHHWxXPU0sGnfzJjCmAT5Yu2oGbmro+E=
 github.com/mulesoft-anypoint/anypoint-client-go/apim_policy v0.0.1 h1:ilSNrRBIBpkKVCaxFPeqCzISwZaL3F+DPFPT7/27iV4=
 github.com/mulesoft-anypoint/anypoint-client-go/apim_policy v0.0.1/go.mod h1:aCSab2+icg00k8ur845GuxfR9MiS2KPEYumO86pauik=
 github.com/mulesoft-anypoint/anypoint-client-go/authorization v0.3.0 h1:9CmX/n8KHR0DpK0WBYt4kO8youq2TYZ8r3XLqmRtJFY=

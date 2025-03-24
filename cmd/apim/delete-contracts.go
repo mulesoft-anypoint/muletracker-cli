@@ -14,12 +14,12 @@ import (
 )
 
 func DeleteApiContractsConcurrently(ctx context.Context, client *anypoint.Client, orgID, envID, apiID string, contracts []ApiContracts) error {
-	const concurrencyLimit = 10
+	const concurrencyLimit = 5
 	sem := make(chan struct{}, concurrencyLimit)
 	var wg sync.WaitGroup
 	errCh := make(chan error, 1)
 
-	rateLimiter := time.NewTicker(100 * time.Millisecond)
+	rateLimiter := time.NewTicker(250 * time.Millisecond)
 	defer rateLimiter.Stop()
 
 	for _, contract := range contracts {

@@ -13,8 +13,8 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/mulesoft-anypoint/anypoint-client-go/apim v0.1.1 // indirect
-	github.com/mulesoft-anypoint/anypoint-client-go/apim_contract v0.0.1 // indirect
+	github.com/mulesoft-anypoint/anypoint-client-go/apim v0.3.1 // indirect
+	github.com/mulesoft-anypoint/anypoint-client-go/apim_contract v0.1.0 // indirect
 	github.com/mulesoft-anypoint/anypoint-client-go/apim_policy v0.0.1 // indirect
 	github.com/mulesoft-anypoint/anypoint-client-go/authorization v0.3.0 // indirect
 	github.com/mulesoft-anypoint/anypoint-client-go/exchange_client_apps v0.0.1 // indirect
@@ -57,5 +57,3 @@ replace github.com/mulesoft-anypoint/muletracker-cli/cmd/runtime => ./cmd/runtim
 replace github.com/mulesoft-anypoint/muletracker-cli/cmd/apim => ./cmd/apim
 
 replace github.com/mulesoft-anypoint/muletracker-cli/utils => ./utils
-
-replace github.com/mulesoft-anypoint/anypoint-client-go/apim_contract => /Users/souf/Workspaces/cat/Anypoint-Devops-Collective/anypoint-automation-client-generator/dist/apim_contract
