@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/mulesoft-anypoint/anypoint-client-go/apim v0.1.1
+	github.com/mulesoft-anypoint/anypoint-client-go/apim_contract v0.0.0-00010101000000-000000000000
 	github.com/mulesoft-anypoint/muletracker-cli/anypoint v0.0.1
 	github.com/mulesoft-anypoint/muletracker-cli/utils v0.0.0
 	github.com/spf13/cobra v1.9.1
@@ -46,3 +47,5 @@ replace github.com/mulesoft-anypoint/muletracker-cli/anypoint => ../../anypoint
 replace github.com/mulesoft-anypoint/muletracker-cli/config => ../../config
 
 replace github.com/mulesoft-anypoint/muletracker-cli/utils => ../../utils
+
+replace github.com/mulesoft-anypoint/anypoint-client-go/apim_contract => /Users/souf/Workspaces/cat/Anypoint-Devops-Collective/anypoint-automation-client-generator/dist/apim_contract

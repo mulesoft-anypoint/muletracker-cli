@@ -15,5 +15,10 @@ func init() {
 	// Register subcommands.
 	ApimCmd.AddCommand(listApiCmd)
 	ApimCmd.AddCommand(deleteCmd)
+	ApimCmd.AddCommand(listContractsCmd)
+	ApimCmd.AddCommand(revokeContractsCmd)
+	ApimCmd.AddCommand(restoreContractsCmd)
+	ApimCmd.AddCommand(deleteContractsCmd)
+	ApimCmd.AddCommand(approveContractsCmd)
 	// Later add create, delete, etc.
 }

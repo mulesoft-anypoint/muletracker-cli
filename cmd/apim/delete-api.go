@@ -1,8 +1,6 @@
 package apim
 
 import (
-	"fmt"
-
 	"github.com/mulesoft-anypoint/muletracker-cli/anypoint"
 	"github.com/mulesoft-anypoint/muletracker-cli/utils"
 	"github.com/spf13/cobra"
@@ -12,6 +10,12 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete-api",
 	Short: "Delete an API Manager instance",
 	Long:  "Delete an API Manager instance by specifying its ID. This command removes the instance from the API Management system.",
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if !cmd.Flags().Changed("id") {
+			return utils.GetConfirmed("Are you sure you want to delete this API Manager instance?")
+		}
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		// Retrieve required flag.
 		orgID, _ := cmd.Flags().GetString("org")
@@ -43,7 +47,7 @@ var deleteCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Printf("Successfully deleted API Manager instance: %s\n", instanceID)
+		utils.PrintSuccess("Successfully deleted API Manager instance: %s", instanceID)
 	},
 }
 
@@ -52,4 +56,5 @@ func init() {
 	deleteCmd.Flags().String("env", "", "The Environment ID. If not provided, the id from the saved context will be loaded if present.")
 	deleteCmd.Flags().String("id", "", "ID of the API Manager instance to delete")
 	deleteCmd.Flags().StringP("token", "t", "", "The Anypoint Access Token. This token must be the org admin's token in order to have access to all orgs and environments.")
+	deleteCmd.MarkFlagRequired("id")
 }

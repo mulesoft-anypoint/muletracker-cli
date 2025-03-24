@@ -1,7 +1,6 @@
 package apim
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/mulesoft-anypoint/anypoint-client-go/apim"
@@ -178,32 +177,32 @@ var listApiCmd = &cobra.Command{
 		utils.PrintClientInfo(ctx, client)
 		//Display initial result
 		if len(instances) == 0 {
-			fmt.Println("\nNo API Manager instances Found.")
+			utils.PrintWarning("No API Manager instances Found.")
 			return
 		} else {
-			fmt.Printf("\n* Found %d APIs\n", CountApis(instances))
+			utils.PrintInfo("Found %d APIs\n", CountApis(instances))
 		}
 		// Apply type filtering if specified.
 		if !strings.EqualFold(filterType, "all") {
 			instances = FilterApiByType(instances, filterType)
-			fmt.Printf("* After applying %s type filter, %d apis remain\n", filterType, CountApis(instances))
+			utils.PrintInfo("After applying %s type filter, %d apis remain\n", filterType, CountApis(instances))
 		}
 		//filter apis on contracts
 		if !strings.EqualFold(filterContract, "all") {
 			instances = FilterApiByContracts(instances, strings.ToLower(filterContract))
-			fmt.Printf("* After applying %s contract filter, %d apis remain\n", filterContract, CountApis(instances))
+			utils.PrintInfo("After applying %s contract filter, %d apis remain\n", filterContract, CountApis(instances))
 		}
 		//filter apis on status
 		if !strings.EqualFold(filterStatus, "all") {
 			instances = FilterApiByStatus(instances, filterStatus)
-			fmt.Printf("* After applying %s status filter, %d apis remain\n", filterStatus, CountApis(instances))
+			utils.PrintInfo("After applying %s status filter, %d apis remain\n", filterStatus, CountApis(instances))
 		}
 		if !strings.EqualFold(filterVisiblity, "all") {
 			instances = FilterApisByVisibility(instances, filterVisiblity)
-			fmt.Printf("* After applying %s visibility filter, %d apis remain\n", filterVisiblity, CountApis(instances))
+			utils.PrintInfo("After applying %s visibility filter, %d apis remain\n", filterVisiblity, CountApis(instances))
 		}
 		if len(instances) == 0 {
-			fmt.Println("\nNo API Manager instances match the specified criteria.")
+			utils.PrintWarning("No API Manager instances match the specified criteria.")
 			return
 		}
 		// If exportFile is provided, export to CSV.
@@ -213,10 +212,9 @@ var listApiCmd = &cobra.Command{
 				utils.PrintError("Error exporting results to CSV: %v\n", err)
 				return
 			}
-			fmt.Printf("\nResults successfully exported to %s\n", exportFile)
+			utils.PrintSuccess("Results successfully exported to %s\n", exportFile)
 		} else {
 			// Otherwise, print a summary table.
-			fmt.Println()
 			PrintApisTable(instances)
 		}
 	},
