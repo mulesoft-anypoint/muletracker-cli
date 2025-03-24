@@ -42,6 +42,7 @@ type BootDataResponseMinimal struct {
 	Settings struct {
 		Datasources struct {
 			Influxdb struct {
+				Database string `json:"database"`
 				ID int `json:"id"`
 			} `json:"influxdb"`
 		} `json:"datasources"`
@@ -64,14 +65,11 @@ func (c *Client) queryInfluxDB(ctx context.Context, params QueryParams) (*Influx
 
 	// Construct the path by substituting the influxID into the path template.
 	path := fmt.Sprintf(influxDBPathTemplate, strconv.Itoa(influxID))
-
-	// Combine the host and path.
 	baseURL := host + path
 
 	// Build URL query parameters.
 	q := url.Values{}
-	// Hardcoded database value from your example.
-	q.Add("db", `"dias"`)
+	q.Add("db", c.InfluxDbDatabase)
 	q.Add("q", params.Query)
 	q.Add("epoch", "ms")
 
@@ -115,12 +113,12 @@ func (c *Client) queryInfluxDB(ctx context.Context, params QueryParams) (*Influx
 	return &influxResp, nil
 }
 
-// GetInfluxDBID calls the bootdata endpoint and extracts the influxdb id.
-func (c *Client) GetInfluxDBID(ctx context.Context) (int, error) {
+// GetInfluxDBInfo calls the bootdata endpoint and extracts the influxdb id.
+func (c *Client) GetInfluxDBInfo(ctx context.Context) (string, int, error) {
 	// Obtain the host using your helper (getMonitoringHost)
 	host, err := c.getServerHost()
 	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
 	bootDataURL := host + "/monitoring/api/visualizer/api/bootdata"
 	token := c.getEffectiveToken()
@@ -128,7 +126,7 @@ func (c *Client) GetInfluxDBID(ctx context.Context) (int, error) {
 	// Create the GET request.
 	req, err := http.NewRequestWithContext(ctx, "GET", bootDataURL, nil)
 	if err != nil {
-		return 0, fmt.Errorf("error creating bootdata request: %w", err)
+		return "", 0, fmt.Errorf("error creating bootdata request: %w", err)
 	}
 
 	// Set the Authorization header.
@@ -137,7 +135,7 @@ func (c *Client) GetInfluxDBID(ctx context.Context) (int, error) {
 	// Execute the request.
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return 0, fmt.Errorf("error executing bootdata request: %w", err)
+		return "", 0, fmt.Errorf("error executing bootdata request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -145,25 +143,26 @@ func (c *Client) GetInfluxDBID(ctx context.Context) (int, error) {
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		// Debug log: print the raw response body (remove in production)
-		fmt.Printf("Raw response: %s\n", string(body))
-		return 0, fmt.Errorf("received non-OK HTTP status %d: %s", resp.StatusCode, string(body))
+		fmt.Printf("Raw bootdata response: %s\n", string(body))
+		return "", 0, fmt.Errorf("received non-OK HTTP status %d: %s", resp.StatusCode, string(body))
 	}
 
 	// Read the response body.
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return 0, fmt.Errorf("error reading bootdata response: %w", err)
+		return "", 0, fmt.Errorf("error reading bootdata response: %w", err)
 	}
 
 	// Unmarshal only the required fields.
 	var bootData BootDataResponseMinimal
 	if err := json.Unmarshal(body, &bootData); err != nil {
-		return 0, fmt.Errorf("error unmarshaling bootdata response: %w", err)
+		return "", 0, fmt.Errorf("error unmarshaling bootdata response: %w", err)
 	}
 
 	c.InfluxDbId = bootData.Settings.Datasources.Influxdb.ID
+	c.InfluxDbDatabase = bootData.Settings.Datasources.Influxdb.Database
 	// Return the influxdb id.
-	return c.InfluxDbId, nil
+	return c.InfluxDbDatabase, c.InfluxDbId, nil
 }
 
 // GetLastCalledTime fetches the last time the given app was called.

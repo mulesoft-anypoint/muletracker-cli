@@ -28,6 +28,7 @@ type Client struct {
 	ServerIndex      int
 	ExpiresAt        time.Time // the time when the access token expires
 	InfluxDbId       int       // the InfluxDB ID for the organization
+	InfluxDbDatabase string
 	Org              string
 	Env              string
 	// New fields to track which token is being used.
@@ -69,9 +70,9 @@ func NewClient(ctx context.Context, serverIndex int, clientId, clientSecret stri
 		ActiveTokenType: "connected",
 	}
 	// Retrieve the InfluxDB ID from bootdata.
-	_, err = client.GetInfluxDBID(ctx)
+	_, _, err = client.GetInfluxDBInfo(ctx)
 	if err != nil {
-		return nil, errors.New("error retrieving InfluxDB ID: " + err.Error())
+		return nil, errors.New("error retrieving InfluxDB Info: " + err.Error())
 	}
 	// You store the client in a global context for later retrieval.
 	setGlobalClient(client)
@@ -114,6 +115,7 @@ func setGlobalClient(client *Client) {
 	viper.Set("adminAccessToken", client.AdminAccessToken)
 	viper.Set("expiresAt", client.ExpiresAt.Format(time.RFC3339))
 	viper.Set("influxdbId", client.InfluxDbId)
+	viper.Set("influxdbDatabase", client.InfluxDbDatabase)
 	viper.Set("org", client.Org)
 	viper.Set("env", client.Env)
 	viper.Set("activeTokenType", client.ActiveTokenType)
@@ -156,6 +158,7 @@ func GetClientFromContext(opts ...GetClientOption) (*Client, error) {
 	activeTokenType := viper.GetString("activeTokenType")
 	expiresAtStr := viper.GetString("expiresAt")
 	influxDbId := viper.GetInt("influxdbId")
+	influxDbDatabase := viper.GetString("influxdbDatabase")
 	org := viper.GetString("org")
 	env := viper.GetString("env")
 
@@ -184,6 +187,7 @@ func GetClientFromContext(opts ...GetClientOption) (*Client, error) {
 		ServerIndex:      serverIndex,
 		ExpiresAt:        expiresAt,
 		InfluxDbId:       influxDbId,
+		InfluxDbDatabase: influxDbDatabase,
 		Org:              org,
 		Env:              env,
 		ActiveTokenType:  activeTokenType,

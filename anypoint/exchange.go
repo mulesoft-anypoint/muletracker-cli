@@ -39,7 +39,7 @@ func (c *Client) PostExchangeClientApp(ctx context.Context, orgID, name, descrip
 func (c *Client) GetExchangeClientApps(ctx context.Context, orgID string, targetAdminSite bool) ([]exchange_client_apps.ClientApp, error) {
 	exchAppCtx := context.WithValue(context.WithValue(ctx, exchange_client_apps.ContextAccessToken, c.getEffectiveToken()), exchange_client_apps.ContextServerIndex, c.ServerIndex)
 	exchAppClient := exchange_client_apps.NewAPIClient(exchange_client_apps.NewConfiguration())
-	limit := 250
+	limit := 200
 	page := 0
 	result := make([]exchange_client_apps.ClientApp, 0)
 	stop := false
