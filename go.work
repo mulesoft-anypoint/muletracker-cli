@@ -1,0 +1,12 @@
+go 1.24.0
+
+use (
+	.
+	./anypoint
+	./cmd
+	./cmd/apim
+	./cmd/exchange
+	./cmd/runtime
+	./config
+	./utils
+)
